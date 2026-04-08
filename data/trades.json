@@ -21,9 +21,10 @@
     ],
     "notes": "Entered due to rebound from 61.8% FIB and oversold on the RSI. Plus remaining thesis that Brent is undervalued with the war, ceasefire unlikely to hold etc... ",
     "screenshot": "https://www.tradingview.com/x/eb3spjUb/",
-    "status": "open",
+    "status": "win",
     "closePrice": 9337.5,
     "pnl": 28.6,
-    "decimals": 2
+    "decimals": 2,
+    "actualRR": 0.2951039570757879
   }
 ]
