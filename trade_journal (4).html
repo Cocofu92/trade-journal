@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velox Capital — Trade Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f11;
+  --bg2: #13161a;
+  --bg3: #1a1e24;
+  --border: #2a2f38;
+  --text: #c8cdd5;
+  --text2: #8891a0;
+  --accent: #e63946;
+  --green: #2ecc71;
+  --red: #e74c3c;
+  --amber: #f39c12;
+  --blue: #3498db;
+  --mono: 'JetBrains Mono', monospace;
+  --serif: 'Source Serif 4', Georgia, serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; min-height: 100vh; }
+::selection { background: var(--accent); color: #fff; }
+input, select, textarea { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px; font-family: var(--mono); font-size: 12px; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+select { cursor: pointer; }
+button { font-family: var(--mono); cursor: pointer; border: none; border-radius: 4px; font-size: 11px; padding: 7px 14px; font-weight: 600; transition: all 0.15s; }
+button:hover { filter: brightness(1.15); }
+
+/* HEADER */
+.header { background: var(--bg2); border-bottom: 2px solid var(--accent); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+.header-left .brand { font-size: 10px; letter-spacing: 4px; color: var(--accent); font-weight: 700; }
+.header-left h1 { font-family: var(--serif); font-size: 18px; font-weight: 400; color: #fff; margin-top: 2px; }
+.header-right { display: flex; gap: 8px; }
+.header-right button { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); font-size: 10px; }
+
+/* TABS */
+.tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tab { padding: 10px 20px; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab.active { color: #fff; border-bottom-color: var(--accent); }
+
+/* LAYOUT */
+.content { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+/* STATS ROW */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+.stat-card .label { font-size: 10px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; }
+.stat-card .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: #fff; }
+.stat-card .value.green { color: var(--green); }
+.stat-card .value.red { color: var(--red); }
+.stat-card .value.amber { color: var(--amber); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th { text-align: left; padding: 8px 10px; font-size: 10px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
+tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody tr:hover { background: var(--bg3); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+.tag-long { background: rgba(46,204,113,0.15); color: var(--green); }
+.tag-short { background: rgba(231,76,60,0.15); color: var(--red); }
+.tag-win { background: rgba(46,204,113,0.15); color: var(--green); }
+.tag-loss { background: rgba(231,76,60,0.15); color: var(--red); }
+.tag-be { background: rgba(243,156,18,0.15); color: var(--amber); }
+.tag-open { background: rgba(52,152,219,0.15); color: var(--blue); }
+.score { font-weight: 700; }
+.score-high { color: var(--green); }
+.score-med { color: var(--amber); }
+.score-low { color: var(--red); }
+
+/* FORM */
+.form-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+.form-section h3 { font-family: var(--serif); font-size: 16px; color: #fff; margin-bottom: 16px; font-weight: 600; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 10px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; }
+.form-group textarea { min-height: 60px; resize: vertical; }
+.form-full { grid-column: 1 / -1; }
+.form-actions { margin-top: 16px; display: flex; gap: 10px; }
+.btn-primary { background: var(--accent); color: #fff; padding: 9px 24px; font-size: 12px; }
+.btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: 10px; }
+
+/* CALCULATED FIELDS */
+.calc-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.calc-item .label { font-size: 10px; color: var(--text2); }
+.calc-item .val { font-size: 16px; font-weight: 700; color: #fff; margin-top: 2px; }
+
+/* SCORE */
+.score-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.score-item { display: flex; flex-direction: column; gap: 4px; }
+.score-item label { font-size: 9px; color: var(--text2); letter-spacing: 0.5px; }
+.score-item select { padding: 5px; font-size: 11px; }
+
+/* SECTION HEADER */
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.section-header h3 { font-family: var(--serif); font-size: 16px; color: #fff; font-weight: 600; }
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-row select, .filter-row input { font-size: 11px; padding: 5px 8px; }
+
+/* EMPTY STATE */
+.empty { text-align: center; padding: 40px 20px; color: var(--text2); }
+.empty p { margin-top: 8px; font-size: 12px; }
+
+/* STATS CHARTS */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.chart-card h4 { font-size: 11px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.bar-label { width: 60px; font-size: 11px; color: var(--text2); text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 18px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 6px; font-size: 10px; font-weight: 600; color: #fff; min-width: 20px; }
+.bar-fill.green { background: var(--green); }
+.bar-fill.red { background: var(--red); }
+
+/* MODAL */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.modal h3 { font-family: var(--serif); color: #fff; margin-bottom: 16px; }
+
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .chart-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .score-grid { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="brand">VELOX CAPITAL</div>
+    <h1>Trade Journal</h1>
+  </div>
+  <div class="header-right">
+    <button onclick="exportData()">⬇ EXPORT</button>
+    <button onclick="document.getElementById('importFile').click()">⬆ IMPORT</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="new">+ New Trade</div>
+  <div class="tab" data-tab="open">Open</div>
+  <div class="tab" data-tab="journal">Journal</div>
+  <div class="tab" data-tab="stats">Stats</div>
+</div>
+
+<div class="content" id="content"></div>
+
+<script>
+const INSTRUMENTS = ['Brent','Nat Gas','Gold','Silver','Copper','S&P 500','Nasdaq 100','FTSE 100','DAX 40','Nikkei 225','Bitcoin'];
+const CRITERIA = ['Trend','Squeeze','VWAP','RSI','EMA Align'];
+const TIMEFRAMES = ['1H','4H','Daily','Weekly'];
+
+const MARGIN_MAP = {
+  'Brent':      { class: 'Commodities', margin: 5,     leverage: '1:20' },
+  'Nat Gas':    { class: 'Commodities', margin: 5,     leverage: '1:20' },
+  'Gold':       { class: 'Commodities', margin: 5,     leverage: '1:20' },
+  'Silver':     { class: 'Commodities', margin: 5,     leverage: '1:20' },
+  'Copper':     { class: 'Commodities', margin: 5,     leverage: '1:20' },
+  'S&P 500':    { class: 'Indices',     margin: 5,     leverage: '1:20' },
+  'Nasdaq 100': { class: 'Indices',     margin: 5,     leverage: '1:20' },
+  'FTSE 100':   { class: 'Indices',     margin: 5,     leverage: '1:20' },
+  'DAX 40':     { class: 'Indices',     margin: 5,     leverage: '1:20' },
+  'Nikkei 225': { class: 'Indices',     margin: 5,     leverage: '1:20' },
+  'Bitcoin':    { class: 'Crypto',      margin: 50,    leverage: '1:2'  },
+};
+
+function getMargin(instrument) { return MARGIN_MAP[instrument] || { class: '—', margin: 5, leverage: '1:20' }; }
+
+function calcMarginReq(t) {
+  if (!t.entry || !t.stake) return 0;
+  const m = getMargin(t.instrument);
+  return t.entry * t.stake * (m.margin / 100);
+}
+
+let trades = JSON.parse(localStorage.getItem('velox_trades') || '[]');
+let currentTab = 'dashboard';
+let editingId = null;
+
+function save() { localStorage.setItem('velox_trades', JSON.stringify(trades)); }
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function openTrades() { return trades.filter(t => t.status === 'open'); }
+function closedTrades() { return trades.filter(t => t.status !== 'open'); }
+
+function calcRisk(t) {
+  if (!t.entry || !t.stop || !t.stake) return 0;
+  return Math.abs(t.entry - t.stop) * t.stake;
+}
+
+function calcRR(t) {
+  if (!t.entry || !t.stop || !t.target) return 0;
+  const risk = Math.abs(t.entry - t.stop);
+  if (risk === 0) return 0;
+  return Math.abs(t.target - t.entry) / risk;
+}
+
+function totalScore(t) {
+  return (t.scores || [0,0,0,0,0]).reduce((a,b) => a + b, 0);
+}
+
+function sizeRule(score) {
+  if (score >= 8) return 'FULL';
+  if (score >= 6) return 'HALF';
+  return 'NO TRADE';
+}
+
+function fmt(n, d=2) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-GB', {minimumFractionDigits: d, maximumFractionDigits: d});
+}
+
+function fmtGBP(n) {
+  if (n == null || isNaN(n)) return '—';
+  const prefix = n >= 0 ? '+' : '';
+  return prefix + '£' + Math.abs(n).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// TABS
+document.getElementById('tabs').addEventListener('click', e => {
+  if (e.target.classList.contains('tab')) {
+    currentTab = e.target.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    e.target.classList.add('active');
+    render();
+  }
+});
+
+function render() {
+  const c = document.getElementById('content');
+  switch(currentTab) {
+    case 'dashboard': c.innerHTML = renderDashboard(); break;
+    case 'new': c.innerHTML = renderNewTrade(); bindNewTradeForm(); break;
+    case 'open': c.innerHTML = renderOpenTrades(); break;
+    case 'journal': c.innerHTML = renderJournal(); break;
+    case 'stats': c.innerHTML = renderStats(); break;
+  }
+}
+
+// DASHBOARD
+function renderDashboard() {
+  const open = openTrades();
+  const closed = closedTrades();
+  const wins = closed.filter(t => t.status === 'win');
+  const losses = closed.filter(t => t.status === 'loss');
+  const winRate = closed.length > 0 ? (wins.length / closed.length * 100) : 0;
+  const totalPnL = closed.reduce((s,t) => s + (t.pnl || 0), 0);
+  const openRisk = open.reduce((s,t) => s + calcRisk(t), 0);
+  const avgRR = closed.length > 0 ? closed.reduce((s,t) => s + (t.actualRR || 0), 0) / closed.length : 0;
+
+  return `
+    <div class="stats-row">
+      <div class="stat-card"><div class="label">Open Trades</div><div class="value">${open.length}</div></div>
+      <div class="stat-card"><div class="label">Total Trades</div><div class="value">${closed.length}</div></div>
+      <div class="stat-card"><div class="label">Win Rate</div><div class="value ${winRate >= 50 ? 'green' : winRate > 0 ? 'red' : ''}">${fmt(winRate,1)}%</div></div>
+      <div class="stat-card"><div class="label">Total P&L</div><div class="value ${totalPnL >= 0 ? 'green' : 'red'}">${fmtGBP(totalPnL)}</div></div>
+      <div class="stat-card"><div class="label">Open Risk</div><div class="value amber">£${fmt(openRisk)}</div></div>
+      <div class="stat-card"><div class="label">Avg R</div><div class="value">${fmt(avgRR,2)}R</div></div>
+    </div>
+    <div class="section-header"><h3>Open Positions</h3></div>
+    ${open.length === 0 ? '<div class="empty"><p>No open trades. Click + New Trade to add one.</p></div>' :
+    `<div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Target</th><th>£/pt</th><th>£ Risk</th><th>R:R</th><th>Score</th><th>TF</th></tr></thead>
+      <tbody>${open.map(t => `<tr>
+        <td>${t.date || '—'}</td>
+        <td style="font-weight:600;color:#fff">${t.instrument}</td>
+        <td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td>
+        <td>${fmt(t.entry, t.decimals||2)}</td>
+        <td>${fmt(t.stop, t.decimals||2)}</td>
+        <td>${fmt(t.target, t.decimals||2)}</td>
+        <td>£${fmt(t.stake)}</td>
+        <td style="color:var(--amber)">£${fmt(calcRisk(t))}</td>
+        <td>${fmt(calcRR(t),1)}:1</td>
+        <td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td>
+        <td>${t.timeframe||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`}
+    <div class="section-header" style="margin-top:24px"><h3>Recent Closed</h3></div>
+    ${closed.length === 0 ? '<div class="empty"><p>No closed trades yet.</p></div>' :
+    `<div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Result</th><th>P&L</th><th>R</th><th>Score</th></tr></thead>
+      <tbody>${closed.slice(-10).reverse().map(t => `<tr>
+        <td>${t.date || '—'}</td>
+        <td style="font-weight:600;color:#fff">${t.instrument}</td>
+        <td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td>
+        <td><span class="tag tag-${t.status}">${t.status.toUpperCase()}</span></td>
+        <td style="color:${(t.pnl||0)>=0?'var(--green)':'var(--red)'}">${fmtGBP(t.pnl||0)}</td>
+        <td>${fmt(t.actualRR||0,2)}R</td>
+        <td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`}
+  `;
+}
+
+// NEW TRADE
+function renderNewTrade() {
+  const t = editingId ? trades.find(x => x.id === editingId) : null;
+  return `
+    <div class="form-section">
+      <h3>${t ? 'Edit Trade' : 'New Trade'}</h3>
+      <div class="form-grid" id="tradeForm">
+        <div class="form-group">
+          <label>Instrument</label>
+          <select id="f_instrument" onchange="updateMarginDisplay();updateCalcs()">${INSTRUMENTS.map(i => `<option ${t&&t.instrument===i?'selected':''}>${i}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Class / Margin</label>
+          <div id="marginInfo" style="padding:7px 0;font-size:12px;color:var(--text2)">—</div>
+        </div>
+        <div class="form-group">
+          <label>Direction</label>
+          <select id="f_direction"><option value="long" ${t&&t.direction==='long'?'selected':''}>Long</option><option value="short" ${t&&t.direction==='short'?'selected':''}>Short</option></select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="f_date" value="${t?t.date:new Date().toISOString().slice(0,10)}">
+        </div>
+        <div class="form-group">
+          <label>Timeframe</label>
+          <select id="f_timeframe">${TIMEFRAMES.map(tf => `<option ${t&&t.timeframe===tf?'selected':''}>${tf}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Entry Price</label>
+          <input type="number" step="any" id="f_entry" value="${t?t.entry:''}" oninput="updateCalcs()">
+        </div>
+        <div class="form-group">
+          <label>Stop Loss</label>
+          <input type="number" step="any" id="f_stop" value="${t?t.stop:''}" oninput="updateCalcs()">
+        </div>
+        <div class="form-group">
+          <label>Target</label>
+          <input type="number" step="any" id="f_target" value="${t?t.target:''}" oninput="updateCalcs()">
+        </div>
+        <div class="form-group">
+          <label>£ per Point</label>
+          <input type="number" step="any" id="f_stake" value="${t?t.stake:''}" oninput="updateCalcs()">
+        </div>
+      </div>
+
+      <div class="calc-row" id="calcRow">
+        <div class="calc-item"><div class="label">STOP DISTANCE</div><div class="val" id="c_dist">—</div></div>
+        <div class="calc-item"><div class="label">£ AT RISK</div><div class="val" id="c_risk" style="color:var(--amber)">—</div></div>
+        <div class="calc-item"><div class="label">R:R</div><div class="val" id="c_rr">—</div></div>
+        <div class="calc-item"><div class="label">£ REWARD</div><div class="val" id="c_reward" style="color:var(--green)">—</div></div>
+        <div class="calc-item"><div class="label">MARGIN REQ</div><div class="val" id="c_margin" style="color:var(--blue)">—</div></div>
+      </div>
+
+      <div style="margin-top:20px">
+        <label style="font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px">SETUP SCORE (0 = No / 1 = Partial / 2 = Yes)</label>
+        <div class="score-grid">
+          ${CRITERIA.map((c,i) => `<div class="score-item">
+            <label>${c}</label>
+            <select id="f_score_${i}" onchange="updateScoreDisplay()">
+              <option value="0" ${t&&t.scores&&t.scores[i]===0?'selected':''}>0</option>
+              <option value="1" ${t&&t.scores&&t.scores[i]===1?'selected':''}>1</option>
+              <option value="2" ${t&&t.scores&&t.scores[i]===2?'selected':''}>2</option>
+            </select>
+          </div>`).join('')}
+        </div>
+        <div style="margin-top:10px;display:flex;gap:16px;align-items:center">
+          <span style="font-size:11px;color:var(--text2)">TOTAL:</span>
+          <span id="scoreTotal" style="font-size:20px;font-weight:700;color:#fff">0/10</span>
+          <span id="sizeRule" class="tag" style="font-size:11px">—</span>
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-top:16px">
+        <div class="form-group form-full">
+          <label>Thesis / Notes</label>
+          <textarea id="f_notes" rows="3">${t?t.notes||'':''}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Screenshot URL</label>
+          <input type="url" id="f_screenshot" value="${t?t.screenshot||'':''}" placeholder="https://...">
+        </div>
+        ${t ? `
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f_status">
+            <option value="open" ${t.status==='open'?'selected':''}>Open</option>
+            <option value="win" ${t.status==='win'?'selected':''}>Win</option>
+            <option value="loss" ${t.status==='loss'?'selected':''}>Loss</option>
+            <option value="breakeven" ${t.status==='breakeven'?'selected':''}>Breakeven</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Close Price</label>
+          <input type="number" step="any" id="f_closePrice" value="${t.closePrice||''}">
+        </div>
+        <div class="form-group">
+          <label>Actual P&L (£)</label>
+          <input type="number" step="any" id="f_pnl" value="${t.pnl||''}">
+        </div>
+        ` : ''}
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveTrade()">${t ? 'Update Trade' : 'Log Trade'}</button>
+        ${t ? `<button class="btn-danger" onclick="deleteTrade('${t.id}')">Delete</button>` : ''}
+        <button class="btn-secondary" onclick="editingId=null;currentTab='dashboard';render();">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function bindNewTradeForm() {
+  updateCalcs();
+  updateScoreDisplay();
+  updateMarginDisplay();
+}
+
+function updateMarginDisplay() {
+  const inst = document.getElementById('f_instrument')?.value;
+  const m = getMargin(inst);
+  const el = document.getElementById('marginInfo');
+  if (el) el.innerHTML = `<span style="color:#fff;font-weight:600">${m.class}</span> · ${m.margin}% margin · ${m.leverage} leverage`;
+}
+
+function updateCalcs() {
+  const entry = parseFloat(document.getElementById('f_entry')?.value);
+  const stop = parseFloat(document.getElementById('f_stop')?.value);
+  const target = parseFloat(document.getElementById('f_target')?.value);
+  const stake = parseFloat(document.getElementById('f_stake')?.value);
+  const inst = document.getElementById('f_instrument')?.value;
+
+  const dist = (!isNaN(entry) && !isNaN(stop)) ? Math.abs(entry - stop) : null;
+  const risk = (dist && !isNaN(stake)) ? dist * stake : null;
+  const rr = (dist && !isNaN(target) && !isNaN(entry) && dist > 0) ? Math.abs(target - entry) / dist : null;
+  const reward = (rr && risk) ? rr * risk : null;
+
+  const m = getMargin(inst);
+  const marginReq = (!isNaN(entry) && !isNaN(stake)) ? entry * stake * (m.margin / 100) : null;
+
+  const el = id => document.getElementById(id);
+  if (el('c_dist')) el('c_dist').textContent = dist != null ? fmt(dist,2) + ' pts' : '—';
+  if (el('c_risk')) el('c_risk').textContent = risk != null ? '£' + fmt(risk) : '—';
+  if (el('c_rr')) el('c_rr').textContent = rr != null ? fmt(rr,1) + ':1' : '—';
+  if (el('c_reward')) el('c_reward').textContent = reward != null ? '£' + fmt(reward) : '—';
+  if (el('c_margin')) el('c_margin').textContent = marginReq != null ? '£' + fmt(marginReq) : '—';
+}
+
+function updateScoreDisplay() {
+  let total = 0;
+  for (let i = 0; i < 5; i++) {
+    const el = document.getElementById(`f_score_${i}`);
+    if (el) total += parseInt(el.value);
+  }
+  const el = document.getElementById('scoreTotal');
+  const rule = document.getElementById('sizeRule');
+  if (el) {
+    el.textContent = total + '/10';
+    el.style.color = total >= 8 ? 'var(--green)' : total >= 6 ? 'var(--amber)' : 'var(--red)';
+  }
+  if (rule) {
+    const r = sizeRule(total);
+    rule.textContent = r;
+    rule.style.background = r === 'FULL' ? 'rgba(46,204,113,0.15)' : r === 'HALF' ? 'rgba(243,156,18,0.15)' : 'rgba(231,76,60,0.15)';
+    rule.style.color = r === 'FULL' ? 'var(--green)' : r === 'HALF' ? 'var(--amber)' : 'var(--red)';
+  }
+}
+
+function saveTrade() {
+  const scores = [];
+  for (let i = 0; i < 5; i++) scores.push(parseInt(document.getElementById(`f_score_${i}`).value));
+
+  const marginInfo = getMargin(document.getElementById('f_instrument').value);
+  const data = {
+    id: editingId || genId(),
+    instrument: document.getElementById('f_instrument').value,
+    assetClass: marginInfo.class,
+    marginPct: marginInfo.margin,
+    leverage: marginInfo.leverage,
+    direction: document.getElementById('f_direction').value,
+    date: document.getElementById('f_date').value,
+    timeframe: document.getElementById('f_timeframe').value,
+    entry: parseFloat(document.getElementById('f_entry').value) || null,
+    stop: parseFloat(document.getElementById('f_stop').value) || null,
+    target: parseFloat(document.getElementById('f_target').value) || null,
+    stake: parseFloat(document.getElementById('f_stake').value) || null,
+    scores: scores,
+    notes: document.getElementById('f_notes').value,
+    screenshot: document.getElementById('f_screenshot').value,
+    status: document.getElementById('f_status')?.value || 'open',
+    closePrice: parseFloat(document.getElementById('f_closePrice')?.value) || null,
+    pnl: parseFloat(document.getElementById('f_pnl')?.value) || null,
+    decimals: ['Gold','S&P 500','Nasdaq 100','FTSE 100','DAX 40','Nikkei 225','Bitcoin','Brent'].includes(document.getElementById('f_instrument').value) ? 2 : ['Silver','Copper'].includes(document.getElementById('f_instrument').value) ? 4 : 3,
+  };
+
+  // Calculate actual R if closed
+  if (data.status !== 'open' && data.pnl != null) {
+    const risk = calcRisk(data);
+    data.actualRR = risk > 0 ? data.pnl / risk : 0;
+  }
+
+  if (editingId) {
+    const idx = trades.findIndex(t => t.id === editingId);
+    if (idx >= 0) trades[idx] = data;
+  } else {
+    trades.push(data);
+  }
+
+  save();
+  editingId = null;
+  currentTab = 'dashboard';
+  render();
+}
+
+function editTrade(id) {
+  editingId = id;
+  currentTab = 'new';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-tab="new"]').classList.add('active');
+  render();
+}
+
+function deleteTrade(id) {
+  if (confirm('Delete this trade?')) {
+    trades = trades.filter(t => t.id !== id);
+    save();
+    editingId = null;
+    currentTab = 'dashboard';
+    render();
+  }
+}
+
+// OPEN TRADES
+function renderOpenTrades() {
+  const open = openTrades();
+  if (open.length === 0) return '<div class="empty"><p>No open positions.</p></div>';
+  return `
+    <div class="section-header"><h3>Open Positions</h3></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Target</th><th>£/pt</th><th>£ Risk</th><th>R:R</th><th>Score</th><th>TF</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${open.map(t => `<tr>
+        <td>${t.date||'—'}</td>
+        <td style="font-weight:600;color:#fff">${t.instrument}</td>
+        <td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td>
+        <td>${fmt(t.entry,t.decimals||2)}</td>
+        <td>${fmt(t.stop,t.decimals||2)}</td>
+        <td>${fmt(t.target,t.decimals||2)}</td>
+        <td>£${fmt(t.stake)}</td>
+        <td style="color:var(--amber)">£${fmt(calcRisk(t))}</td>
+        <td>${fmt(calcRR(t),1)}:1</td>
+        <td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td>
+        <td>${t.timeframe||'—'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--text2)">${t.notes||'—'}</td>
+        <td><button class="btn-sm btn-secondary" onclick="editTrade('${t.id}')">Edit</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+}
+
+// JOURNAL
+function renderJournal() {
+  const closed = closedTrades().reverse();
+  if (closed.length === 0) return '<div class="empty"><p>No closed trades yet. Close an open trade to see it here.</p></div>';
+  return `
+    <div class="section-header"><h3>Trade Journal</h3></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Entry</th><th>Close</th><th>Result</th><th>P&L</th><th>R</th><th>Score</th><th>TF</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${closed.map(t => `<tr>
+        <td>${t.date||'—'}</td>
+        <td style="font-weight:600;color:#fff">${t.instrument}</td>
+        <td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td>
+        <td>${fmt(t.entry,t.decimals||2)}</td>
+        <td>${fmt(t.closePrice,t.decimals||2)}</td>
+        <td><span class="tag tag-${t.status}">${t.status.toUpperCase()}</span></td>
+        <td style="color:${(t.pnl||0)>=0?'var(--green)':'var(--red)'}">${fmtGBP(t.pnl||0)}</td>
+        <td>${fmt(t.actualRR||0,2)}R</td>
+        <td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td>
+        <td>${t.timeframe||'—'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--text2)">${t.notes||'—'}</td>
+        <td><button class="btn-sm btn-secondary" onclick="editTrade('${t.id}')">Edit</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+}
+
+// STATS
+function renderStats() {
+  const closed = closedTrades();
+  if (closed.length < 2) return '<div class="empty"><p>Need at least 2 closed trades for stats.</p></div>';
+
+  const wins = closed.filter(t => t.status === 'win');
+  const losses = closed.filter(t => t.status === 'loss');
+  const winRate = (wins.length / closed.length * 100);
+  const totalPnL = closed.reduce((s,t) => s + (t.pnl||0), 0);
+  const avgWin = wins.length > 0 ? wins.reduce((s,t) => s + (t.pnl||0), 0) / wins.length : 0;
+  const avgLoss = losses.length > 0 ? losses.reduce((s,t) => s + (t.pnl||0), 0) / losses.length : 0;
+  const expectancy = closed.length > 0 ? totalPnL / closed.length : 0;
+  const avgR = closed.reduce((s,t) => s + (t.actualRR||0), 0) / closed.length;
+  const bestTrade = closed.reduce((best, t) => (t.pnl||0) > (best.pnl||0) ? t : best, closed[0]);
+  const worstTrade = closed.reduce((worst, t) => (t.pnl||0) < (worst.pnl||0) ? t : worst, closed[0]);
+
+  // P&L by instrument
+  const byInst = {};
+  closed.forEach(t => {
+    if (!byInst[t.instrument]) byInst[t.instrument] = { pnl: 0, count: 0, wins: 0 };
+    byInst[t.instrument].pnl += (t.pnl||0);
+    byInst[t.instrument].count++;
+    if (t.status === 'win') byInst[t.instrument].wins++;
+  });
+
+  const maxAbsPnL = Math.max(...Object.values(byInst).map(v => Math.abs(v.pnl)), 1);
+
+  return `
+    <div class="stats-row">
+      <div class="stat-card"><div class="label">Win Rate</div><div class="value ${winRate>=50?'green':'red'}">${fmt(winRate,1)}%</div></div>
+      <div class="stat-card"><div class="label">Total P&L</div><div class="value ${totalPnL>=0?'green':'red'}">${fmtGBP(totalPnL)}</div></div>
+      <div class="stat-card"><div class="label">Expectancy</div><div class="value ${expectancy>=0?'green':'red'}">${fmtGBP(expectancy)}</div></div>
+      <div class="stat-card"><div class="label">Avg Win</div><div class="value green">${fmtGBP(avgWin)}</div></div>
+      <div class="stat-card"><div class="label">Avg Loss</div><div class="value red">${fmtGBP(avgLoss)}</div></div>
+      <div class="stat-card"><div class="label">Avg R</div><div class="value">${fmt(avgR,2)}R</div></div>
+      <div class="stat-card"><div class="label">Best Trade</div><div class="value green">${fmtGBP(bestTrade.pnl||0)}</div></div>
+      <div class="stat-card"><div class="label">Worst Trade</div><div class="value red">${fmtGBP(worstTrade.pnl||0)}</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>P&L by Instrument</h4>
+        ${Object.entries(byInst).sort((a,b) => b[1].pnl - a[1].pnl).map(([inst, data]) => `
+          <div class="bar-row">
+            <div class="bar-label">${inst.length > 8 ? inst.slice(0,8) : inst}</div>
+            <div class="bar-track">
+              <div class="bar-fill ${data.pnl >= 0 ? 'green' : 'red'}" style="width:${Math.max(Math.abs(data.pnl)/maxAbsPnL*100, 8)}%">
+                ${fmtGBP(data.pnl)}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="chart-card">
+        <h4>Win Rate by Instrument</h4>
+        ${Object.entries(byInst).sort((a,b) => (b[1].wins/b[1].count) - (a[1].wins/a[1].count)).map(([inst, data]) => {
+          const wr = data.count > 0 ? data.wins / data.count * 100 : 0;
+          return `
+          <div class="bar-row">
+            <div class="bar-label">${inst.length > 8 ? inst.slice(0,8) : inst}</div>
+            <div class="bar-track">
+              <div class="bar-fill ${wr >= 50 ? 'green' : 'red'}" style="width:${Math.max(wr, 8)}%">
+                ${fmt(wr,0)}% (${data.count})
+              </div>
+            </div>
+          </div>
+        `}).join('')}
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:16px">
+      <h4>Cumulative P&L</h4>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:120px;padding-top:10px;">
+        ${(() => {
+          let cum = 0;
+          const points = closed.map(t => { cum += (t.pnl||0); return cum; });
+          const max = Math.max(...points.map(Math.abs), 1);
+          return points.map((p, i) => {
+            const h = Math.abs(p) / max * 100;
+            return `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;">
+              <div style="width:100%;max-width:20px;height:${Math.max(h,3)}%;background:${p>=0?'var(--green)':'var(--red)'};border-radius:2px 2px 0 0;"></div>
+            </div>`;
+          }).join('');
+        })()}
+      </div>
+    </div>
+  `;
+}
+
+// EXPORT / IMPORT
+function exportData() {
+  const blob = new Blob([JSON.stringify(trades, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `velox_journal_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (Array.isArray(data)) {
+        if (confirm(`Import ${data.length} trades? This will replace existing data.`)) {
+          trades = data;
+          save();
+          render();
+        }
+      }
+    } catch(err) { alert('Invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// INIT
+render();
+</script>
+</body>
+</html>
