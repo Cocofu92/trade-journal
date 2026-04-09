@@ -79,5 +79,32 @@
     "closePrice": null,
     "pnl": null,
     "decimals": 2
+  },
+  {
+    "id": "mnrcvhfw0ist",
+    "instrument": "Nat Gas",
+    "assetClass": "Commodities",
+    "marginPct": 5,
+    "leverage": "1:20",
+    "direction": "long",
+    "date": "2026-04-09",
+    "timeframe": "4H",
+    "entry": 4669,
+    "stop": 3773,
+    "target": 6906,
+    "stake": 0.2,
+    "scores": [
+      2,
+      1,
+      1,
+      0,
+      2
+    ],
+    "notes": "Long TTM August contract. rebound off the 200ema. ",
+    "screenshot": "https://www.tradingview.com/x/mDg02959/",
+    "status": "open",
+    "closePrice": null,
+    "pnl": null,
+    "decimals": 3
   }
 ]
