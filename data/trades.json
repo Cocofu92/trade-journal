@@ -164,5 +164,11 @@
     }
   ],
   "equity": 1585.22,
-  "equityHistory": []
+  "equityHistory": [
+    {
+      "equity": 1585.22,
+      "pnl": 0,
+      "date": "2026-04-09"
+    }
+  ]
 }
