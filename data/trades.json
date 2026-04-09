@@ -49,10 +49,11 @@
       ],
       "notes": "Add to the original position. Strong bullish closing candle after RSI came out of oversold",
       "screenshot": "",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 2
+      "status": "win",
+      "closePrice": 9488.8,
+      "pnl": 27.93,
+      "decimals": 2,
+      "actualRR": 0.1310775295663602
     },
     {
       "id": "mnr5qymqrk4a",
@@ -164,5 +165,11 @@
     }
   ],
   "equity": 1585.22,
-  "equityHistory": []
+  "equityHistory": [
+    {
+      "equity": 1585.22,
+      "pnl": 0,
+      "date": "2026-04-09"
+    }
+  ]
 }
