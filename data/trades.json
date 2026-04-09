@@ -25,5 +25,32 @@
     "closePrice": null,
     "pnl": null,
     "decimals": 2
+  },
+  {
+    "id": "mnr5og0b0sb3",
+    "instrument": "Brent",
+    "assetClass": "Commodities",
+    "marginPct": 5,
+    "leverage": "1:20",
+    "direction": "long",
+    "date": "2026-04-08",
+    "timeframe": "4H",
+    "entry": 9409,
+    "stop": 8800.2,
+    "target": 10224.7,
+    "stake": 0.35,
+    "scores": [
+      2,
+      0,
+      1,
+      2,
+      1
+    ],
+    "notes": "Add to the original position. Strong bullish closing candle after RSI came out of oversold",
+    "screenshot": "",
+    "status": "open",
+    "closePrice": null,
+    "pnl": null,
+    "decimals": 2
   }
 ]
