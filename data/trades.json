@@ -106,5 +106,32 @@
     "closePrice": null,
     "pnl": null,
     "decimals": 3
+  },
+  {
+    "id": "mnrjd9mfidf5",
+    "instrument": "Nasdaq 100",
+    "assetClass": "Indices",
+    "marginPct": 5,
+    "leverage": "1:20",
+    "direction": "short",
+    "date": "2026-04-09",
+    "timeframe": "4H",
+    "entry": 24896,
+    "stop": 25102.6,
+    "target": 23845.9,
+    "stake": 0.25,
+    "scores": [
+      1,
+      0,
+      2,
+      2,
+      1
+    ],
+    "notes": "",
+    "screenshot": "",
+    "status": "open",
+    "closePrice": null,
+    "pnl": null,
+    "decimals": 2
   }
 ]
