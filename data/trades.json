@@ -170,8 +170,8 @@
       "note": "Waiting for daily RSI oversold or teaching triple double"
     },
     "Nat Gas": {
-      "status": "NOT IN PLAY",
-      "note": ""
+      "status": "LIVE",
+      "note": "Long on TTF August on 50 ema and fib retest. SL below "
     },
     "Gold": {
       "status": "NOT IN PLAY",
@@ -207,7 +207,7 @@
     },
     "Bitcoin": {
       "status": "WATCHING",
-      "note": "waiting for break of 200 ema for a bullush play "
+      "note": "waiting for break of 200 ema for a bullish play "
     }
   },
   "cashflows": [
