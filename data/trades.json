@@ -77,10 +77,11 @@
       ],
       "notes": "Should not have entered. Purely specualtive position. Bounced off of 38.2% Fib retracement, after overbought conditions. ",
       "screenshot": "https://www.tradingview.com/x/drLdP64e/",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 2
+      "status": "win",
+      "closePrice": 24814.4,
+      "pnl": 0.8,
+      "decimals": 3,
+      "actualRR": 0.006489555871020049
     },
     {
       "id": "mnrcvhfw0ist",
