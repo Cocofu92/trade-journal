@@ -164,7 +164,60 @@
       "decimals": 2
     }
   ],
-  "equity": 1585.22,
+  "watchlist": {
+    "Brent": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Nat Gas": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Gold": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Silver": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Copper": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "S&P 500": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Nasdaq 100": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "FTSE 100": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "DAX 40": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Nikkei 225": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    },
+    "Bitcoin": {
+      "status": "NOT IN PLAY",
+      "note": ""
+    }
+  },
+  "cashflows": [
+    {
+      "type": "deposit",
+      "amount": 1592.21,
+      "date": "2026-04-12",
+      "id": "mnvirbnqv1jo"
+    }
+  ],
   "equityHistory": [
     {
       "equity": 1585.22,
