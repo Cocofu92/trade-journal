@@ -163,6 +163,33 @@
       "closePrice": null,
       "pnl": null,
       "decimals": 2
+    },
+    {
+      "id": "mnxmmvan27kt",
+      "instrument": "Brent",
+      "assetClass": "Commodities",
+      "marginPct": 5,
+      "leverage": "1:20",
+      "direction": "long",
+      "date": "2026-04-13",
+      "timeframe": "4H",
+      "entry": 9645,
+      "stop": 8750,
+      "target": 10887.3,
+      "stake": 0.2,
+      "scores": [
+        2,
+        1,
+        2,
+        0,
+        2
+      ],
+      "notes": "",
+      "screenshot": "",
+      "status": "open",
+      "closePrice": null,
+      "pnl": null,
+      "decimals": 3
     }
   ],
   "watchlist": {
