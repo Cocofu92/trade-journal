@@ -269,6 +269,17 @@ INDA:'India',EWZ:'Brazil',TLT:'Long Bonds',HYG:'High Yield',LQD:'Inv Grade',
 QUAL:'Quality',MTUM:'Momentum',DGRO:'Div Growth',IWF:'Growth',IWD:'Value',
 BOTZ:'Robotics/AI',ICLN:'Clean Energy',CIBR:'Cybersecurity',ARKK:'Disruptive',MOO:'Agribusiness',
 XBI:'Biotech',ITA:'Defence',KWEB:'China Tech'};
+const ETF_EXCHANGE={
+SPY:'AMEX',QQQ:'NASDAQ',IWM:'AMEX',MDY:'AMEX',DIA:'AMEX',
+XLK:'AMEX',XLF:'AMEX',XLE:'AMEX',XLV:'AMEX',XLI:'AMEX',
+XLY:'AMEX',XLP:'AMEX',XLB:'AMEX',XLU:'AMEX',XLRE:'AMEX',
+GLD:'AMEX',SLV:'AMEX',CPER:'AMEX',USO:'AMEX',UNG:'AMEX',
+PDBC:'NASDAQ',URNM:'AMEX',DBA:'AMEX',GDX:'AMEX',GDXJ:'AMEX',
+EEM:'AMEX',EFA:'AMEX',EWJ:'AMEX',FXI:'AMEX',VGK:'AMEX',
+INDA:'AMEX',EWZ:'AMEX',TLT:'NASDAQ',HYG:'AMEX',LQD:'AMEX',
+QUAL:'AMEX',MTUM:'AMEX',DGRO:'AMEX',IWF:'AMEX',IWD:'AMEX',
+BOTZ:'NASDAQ',ICLN:'NASDAQ',CIBR:'AMEX',ARKK:'AMEX',MOO:'AMEX',
+XBI:'AMEX',ITA:'AMEX',KWEB:'AMEX'};
 const ETF_TICKERS=Object.keys(ETF_UNIVERSE);
 const FMP_KEY='fsUwZ3RqDc7Wa2pjUyMhlLnOet1HVwUl';
 let screenerData=[];let screenerRunning=false;let screenerErrors=[];let screenerFilter={minRS:70,rsiMin:0,rsiMax:100,trendOnly:true,setupFilter:'all',volConfirm:false};let screenerSubTab='setups';
@@ -527,16 +538,19 @@ function exportScreenerCSV(){
   ctx+='# 3. If a trade would exceed risk limits, suggest which existing position to move to BE first\n';
   ctx+='# 4. Consider the overall portfolio balance — long/short, sector concentration, macro theme overlap\n';
   ctx+='# 5. For each A-tier setup, suggest: entry zone, stop level, position size in £/pt based on 2% risk rule\n';
+  ctx+='# 6. When searching TradingView, use the TVSymbol column (e.g. AMEX:XLE, NASDAQ:QQQ) to get the correct ETF\n';
+  ctx+='# 7. Generate a watchlist JSON that I can import into my trade journal\n';
   ctx+='#\n';
   
   // Screener data
-  const headers='Ticker,Name,Close,TrendValid,TrendScore,RSScore,3MReturn,Setup,RSI,%From21EMA,%From50EMA,%From50dHigh,20dRange,50dRange,VolVsAvg,Context';
+  const headers='Ticker,Exchange,TVSymbol,Name,Close,TrendValid,TrendScore,RSScore,3MReturn,Setup,RSI,%From21EMA,%From50EMA,%From50dHigh,20dRange,50dRange,VolVsAvg,Context';
   const rows=data.map(r=>{
     let c='';
+    const exch=ETF_EXCHANGE[r.ticker]||'AMEX';
     if(r.setup==='Pullback')c=`Pullback: ${Math.abs(r.pct21).toFixed(1)}% from 21EMA RSI ${r.rsi.toFixed(0)}`;
     else if(r.setup==='VCP')c=`VCP: range contracted ${((1-r.range20/r.range50)*100).toFixed(0)}% price ${Math.abs(r.pct50H).toFixed(1)}% from 50d high`;
     else c=`No setup: trend ${r.trendScore}/10 RS ${r.rsScore}`;
-    return[r.ticker,`"${ETF_UNIVERSE[r.ticker]||''}"`,r.close.toFixed(2),r.trendValid,r.trendScore,r.rsScore,r.ret3m.toFixed(2),r.setup,r.rsi.toFixed(1),r.pct21.toFixed(2),r.pct50.toFixed(2),r.pct50H.toFixed(2),r.range20.toFixed(2),r.range50.toFixed(2),r.volRatio.toFixed(2),`"${c}"`].join(',');
+    return[r.ticker,exch,`${exch}:${r.ticker}`,`"${ETF_UNIVERSE[r.ticker]||''}"`,r.close.toFixed(2),r.trendValid,r.trendScore,r.rsScore,r.ret3m.toFixed(2),r.setup,r.rsi.toFixed(1),r.pct21.toFixed(2),r.pct50.toFixed(2),r.pct50H.toFixed(2),r.range20.toFixed(2),r.range50.toFixed(2),r.volRatio.toFixed(2),`"${c}"`].join(',');
   });
   
   const csv=ctx+headers+'\n'+rows.join('\n');
