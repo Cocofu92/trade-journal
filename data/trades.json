@@ -191,6 +191,33 @@
       "closePrice": null,
       "pnl": null,
       "decimals": 3
+    },
+    {
+      "id": "mnywr3i5qbod",
+      "instrument": "PBW",
+      "assetClass": "ETF",
+      "marginPct": 20,
+      "leverage": "1:5",
+      "direction": "long",
+      "date": "2026-04-14",
+      "timeframe": "Daily",
+      "entry": 3431.1,
+      "stop": 3376.4,
+      "target": 3622.4,
+      "stake": 0.24,
+      "scores": [
+        1,
+        2,
+        2,
+        1,
+        2
+      ],
+      "notes": "",
+      "screenshot": "https://www.tradingview.com/x/2tfIEH08/",
+      "status": "open",
+      "closePrice": null,
+      "pnl": null,
+      "decimals": 3
     }
   ],
   "watchlist": {
