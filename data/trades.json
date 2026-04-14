@@ -195,12 +195,12 @@
   ],
   "watchlist": {
     "Brent": {
-      "status": "TAKING PROFIT",
-      "note": "Waiting for daily RSI oversold or teaching triple double"
+      "status": "NOT IN PLAY",
+      "note": ""
     },
     "Nat Gas": {
-      "status": "LIVE",
-      "note": "Long on TTF August on 50 ema and fib retest. SL below "
+      "status": "NOT IN PLAY",
+      "note": ""
     },
     "Gold": {
       "status": "NOT IN PLAY",
@@ -211,16 +211,16 @@
       "note": ""
     },
     "Copper": {
-      "status": "STALKING",
-      "note": "Looking for long position if breakout of upper donchian band "
+      "status": "NOT IN PLAY",
+      "note": ""
     },
     "S&P 500": {
       "status": "NOT IN PLAY",
       "note": ""
     },
     "Nasdaq 100": {
-      "status": "LIVE",
-      "note": "Short from previous retest"
+      "status": "NOT IN PLAY",
+      "note": ""
     },
     "FTSE 100": {
       "status": "NOT IN PLAY",
@@ -235,8 +235,8 @@
       "note": ""
     },
     "Bitcoin": {
-      "status": "WATCHING",
-      "note": "waiting for break of 200 ema for a bullish play "
+      "status": "NOT IN PLAY",
+      "note": ""
     }
   },
   "cashflows": [
