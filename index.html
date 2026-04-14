@@ -108,6 +108,12 @@ function getTimeWeightedReturn(){
   return(twrProduct-1)*100;
 }
 function addEquitySnapshot(eq,date){const h=getEquityHistory();h.push({equity:eq,deposited:getTotalDeposited(),date:date||new Date().toISOString().slice(0,10)});localStorage.setItem('velox_equity_history',JSON.stringify(h))}
+
+// Risk settings
+function getRiskSettings(){return JSON.parse(localStorage.getItem('velox_risk_settings')||'{"mode":"fixed","perTrade":100,"perInstrument":200,"perCorrGroup":400}')}
+function saveRiskSettings(s){localStorage.setItem('velox_risk_settings',JSON.stringify(s))}
+function getRiskLimit(type){const s=getRiskSettings();const eq=getEquity();if(s.mode==='pct')return type==='trade'?eq*0.02:type==='instrument'?eq*0.02:eq*0.04;return type==='trade'?s.perTrade:type==='instrument'?s.perInstrument:s.perCorrGroup}
+function getRiskLabel(){const s=getRiskSettings();return s.mode==='fixed'?`£${s.perTrade}/trade · £${s.perInstrument}/instrument · £${s.perCorrGroup}/corr group`:`2%/trade · 2%/instrument · 4%/corr group`}
 function save(){localStorage.setItem('velox_trades',JSON.stringify(trades));localStorage.setItem('velox_watchlist',JSON.stringify(watchlist));syncToGitHub()}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}function openTrades(){return trades.filter(t=>t.status==='open')}function closedTrades(){return trades.filter(t=>t.status!=='open')}function calcRisk(t){return(!t.entry||!t.stop||!t.stake)?0:Math.abs(t.entry-t.stop)*t.stake}function calcLiveRisk(t){return t.breakeven?0:calcRisk(t)}function calcRR(t){if(!t.entry||!t.stop||!t.target)return 0;const r=Math.abs(t.entry-t.stop);return r===0?0:Math.abs(t.target-t.entry)/r}function totalScore(t){return(t.scores||[0,0,0,0,0]).reduce((a,b)=>a+b,0)}function sizeRule(s){return s>=8?'FULL':s>=6?'HALF':'NO TRADE'}function fmt(n,d=2){if(n==null||isNaN(n))return'—';return Number(n).toLocaleString('en-GB',{minimumFractionDigits:d,maximumFractionDigits:d})}function fmtGBP(n){if(n==null||isNaN(n))return'—';return(n>=0?'+':'')+'\u00A3'+Math.abs(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
 
@@ -136,7 +142,11 @@ ${open.length===0?'<div class="empty"><p>No open positions</p></div>':`<div clas
 
 function renderSidebar(){const equity=getEquity(),open=openTrades(),totalRisk=open.reduce((s,t)=>s+calcLiveRisk(t),0),riskPct=equity>0?totalRisk/equity*100:0;
 const byInst={};open.forEach(t=>{const r=calcLiveRisk(t);if(!byInst[t.instrument])byInst[t.instrument]={risk:0,count:0,direction:t.direction};byInst[t.instrument].risk+=r;byInst[t.instrument].count++});
-const warnings=[];const live=Object.keys(byInst);for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){const a=live[i],b=live[j],c=CORR[a]?.[b];if(c===3){const combined=byInst[a].risk+byInst[b].risk,pct=equity>0?combined/equity*100:0;if(combined>0)warnings.push(pct>4?`${INST_SHORT[a]}+${INST_SHORT[b]}: £${fmt(combined)} (${fmt(pct,1)}%) exceeds 4%`:`${INST_SHORT[a]}+${INST_SHORT[b]}: HIGH corr`)}}
+const warnings=[];const live=Object.keys(byInst);const corrLimit=getRiskLimit('corrGroup');const instLimit=getRiskLimit('instrument');
+for(let i=0;i<live.length;i++){
+  if(byInst[live[i]].risk>instLimit)warnings.push(`${INST_SHORT[live[i]]||live[i]}: £${fmt(byInst[live[i]].risk)} exceeds £${fmt(instLimit)} instrument cap`);
+  for(let j=i+1;j<live.length;j++){const a=live[i],b=live[j],c=CORR[a]?.[b];if(c===3){const combined=byInst[a].risk+byInst[b].risk;if(combined>0&&combined>corrLimit)warnings.push(`${INST_SHORT[a]||a}+${INST_SHORT[b]||b}: £${fmt(combined)} exceeds £${fmt(corrLimit)} corr group cap`);else if(combined>0)warnings.push(`${INST_SHORT[a]||a}+${INST_SHORT[b]||b}: HIGH corr`)}}
+}
 const hist=getEquityHistory();
 return`<div class="sidebar">
 <div class="sidebar-card"><h4>Account</h4>
@@ -476,8 +486,8 @@ function exportScreenerCSV(){
   
   let ctx='# PORTFOLIO CONTEXT\n';
   ctx+=`# Equity: £${fmt(equity)} | Deposited: £${fmt(dep)} | TWR: ${twr>=0?'+':''}${twr.toFixed(2)}%\n`;
-  ctx+=`# Live Risk: £${fmt(totalRisk)} (${equity>0?fmt(riskPct,1):'?'}% of equity) | Max allowed: 10%\n`;
-  ctx+=`# Available risk budget: £${fmt(Math.max(0,equity*0.1-totalRisk))} (${equity>0?fmt(Math.max(0,10-riskPct),1):'?'}%)\n`;
+  ctx+=`# Live Risk: £${fmt(totalRisk)} (${equity>0?fmt(riskPct,1):'?'}% of equity)\n`;
+  ctx+=`# Risk Mode: ${getRiskSettings().mode==='fixed'?'FIXED £':'% OF EQUITY'} | ${getRiskLabel()}\n`;
   ctx+='#\n# OPEN POSITIONS\n';
   
   if(open.length===0){ctx+='# None\n'}
@@ -523,21 +533,26 @@ function exportScreenerCSV(){
   else warnings.forEach(w=>ctx+=w+'\n');
   
   // Risk allocation guidance
+  const rs=getRiskSettings();
   ctx+='#\n# RISK GUIDANCE\n';
-  ctx+='# Per-instrument max: 2% of equity (£'+fmt(equity*0.02)+')\n';
-  ctx+='# Per-theme max: 4% of equity (£'+fmt(equity*0.04)+')\n';
+  ctx+=`# Mode: ${rs.mode==='fixed'?'FIXED £ SIZING':'% OF EQUITY'}\n`;
+  ctx+=`# Per-trade risk: £${fmt(getRiskLimit('trade'))}\n`;
+  ctx+=`# Per-instrument max: £${fmt(getRiskLimit('instrument'))}\n`;
+  ctx+=`# Per-correlated-group max: £${fmt(getRiskLimit('corrGroup'))}\n`;
   ctx+='# Positions at BE do not consume risk budget — consider moving stops to BE to free capacity\n';
   const bePositions=open.filter(t=>t.breakeven);
   const nonBE=open.filter(t=>!t.breakeven);
   if(bePositions.length>0)ctx+='# BE positions: '+bePositions.map(t=>t.instrument).join(', ')+' (£0 risk)\n';
   if(nonBE.length>0)ctx+='# Active risk: '+nonBE.map(t=>t.instrument+' £'+fmt(calcRisk(t))).join(', ')+'\n';
+  const totalUsed=nonBE.reduce((s,t)=>s+calcLiveRisk(t),0);
+  ctx+=`# Total active risk: £${fmt(totalUsed)}\n`;
   
   ctx+='#\n# INSTRUCTIONS FOR CLAUDE\n';
   ctx+='# 1. Rate each setup as A-tier (take now), B-tier (watch for confirmation), or C-tier (pass)\n';
   ctx+='# 2. Flag ANY correlation >0.7 with existing open positions as a WARNING\n';
-  ctx+='# 3. If a trade would exceed risk limits, suggest which existing position to move to BE first\n';
+  ctx+=`# 3. If adding a trade would exceed £${fmt(getRiskLimit('instrument'))} per instrument or £${fmt(getRiskLimit('corrGroup'))} per correlated group, suggest moving an existing position to BE first\n`;
   ctx+='# 4. Consider the overall portfolio balance — long/short, sector concentration, macro theme overlap\n';
-  ctx+='# 5. For each A-tier setup, suggest: entry zone, stop level, position size in £/pt based on 2% risk rule\n';
+  ctx+=`# 5. For each A-tier setup, suggest: entry zone, stop level, position size in £/pt that keeps risk at £${fmt(getRiskLimit('trade'))} per trade\n`;
   ctx+='# 6. When searching TradingView, use the TVSymbol column (e.g. AMEX:XLE, NASDAQ:QQQ) to get the correct ETF\n';
   ctx+='# 7. Generate a watchlist JSON that I can import into my trade journal\n';
   ctx+='#\n';
@@ -587,7 +602,23 @@ function renderETFCorrelation(){
 </tbody></table></div>`;
 }
 
-function renderSettings(){const cfg=getGHConfig();return`<div class="form-section"><h3>GitHub Sync</h3><p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">Data stored as <code style="color:var(--accent)">data/trades.json</code>. Auto-pushes on save.</p><div class="form-grid"><div class="form-group"><label>Username</label><input type="text" id="gh_owner" value="${cfg.owner||''}" placeholder="username"></div><div class="form-group"><label>Repository</label><input type="text" id="gh_repo" value="${cfg.repo||''}" placeholder="trade-journal"></div><div class="form-group form-full"><label>Token</label><input type="password" id="gh_token" value="${cfg.token||''}" placeholder="github_pat_..."></div></div><p style="font-size:11px;color:var(--text2);margin-top:12px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--accent)">Create token</a> → Fine-grained → repo → Contents: Read and write</p><div class="form-actions" style="margin-top:16px"><button class="btn-primary" onclick="saveSett()">Save</button><button class="btn-secondary" onclick="testGH()">Test</button></div><div id="settingsMsg" style="margin-top:12px;font-size:12px"></div></div>`}
+function renderSettings(){const cfg=getGHConfig();const rs=getRiskSettings();return`<div class="form-section"><h3>Risk Settings</h3>
+<div style="display:flex;gap:12px;margin-bottom:16px">
+<button class="btn-sm ${rs.mode==='fixed'?'btn-primary':'btn-secondary'}" onclick="updateRiskMode('fixed')">Fixed £ Sizing</button>
+<button class="btn-sm ${rs.mode==='pct'?'btn-primary':'btn-secondary'}" onclick="updateRiskMode('pct')">% of Equity</button>
+</div>
+${rs.mode==='fixed'?`<div class="form-grid">
+<div class="form-group"><label>£ Risk per Trade</label><input type="number" id="rs_trade" value="${rs.perTrade}" step="any"></div>
+<div class="form-group"><label>£ Max per Instrument</label><input type="number" id="rs_inst" value="${rs.perInstrument}" step="any"></div>
+<div class="form-group"><label>£ Max per Corr Group</label><input type="number" id="rs_corr" value="${rs.perCorrGroup}" step="any"></div>
+</div>
+<div class="form-actions" style="margin-top:12px"><button class="btn-primary" onclick="saveRiskSett()">Save Risk Settings</button></div>`
+:`<p style="font-size:12px;color:var(--text2);margin-top:8px">Using percentage mode: 2% per trade, 2% per instrument, 4% per correlated group. Based on current equity.</p>`}
+<div id="riskMsg" style="margin-top:8px;font-size:12px"></div>
+</div>
+<div class="form-section"><h3>GitHub Sync</h3><p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">Data stored as <code style="color:var(--accent)">data/trades.json</code>. Auto-pushes on save.</p><div class="form-grid"><div class="form-group"><label>Username</label><input type="text" id="gh_owner" value="${cfg.owner||''}" placeholder="username"></div><div class="form-group"><label>Repository</label><input type="text" id="gh_repo" value="${cfg.repo||''}" placeholder="trade-journal"></div><div class="form-group form-full"><label>Token</label><input type="password" id="gh_token" value="${cfg.token||''}" placeholder="github_pat_..."></div></div><p style="font-size:11px;color:var(--text2);margin-top:12px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--accent)">Create token</a> → Fine-grained → repo → Contents: Read and write</p><div class="form-actions" style="margin-top:16px"><button class="btn-primary" onclick="saveSett()">Save</button><button class="btn-secondary" onclick="testGH()">Test</button></div><div id="settingsMsg" style="margin-top:12px;font-size:12px"></div></div>`}
+function updateRiskMode(mode){const rs=getRiskSettings();rs.mode=mode;saveRiskSettings(rs);render()}
+function saveRiskSett(){const rs=getRiskSettings();rs.perTrade=parseFloat(document.getElementById('rs_trade')?.value)||100;rs.perInstrument=parseFloat(document.getElementById('rs_inst')?.value)||200;rs.perCorrGroup=parseFloat(document.getElementById('rs_corr')?.value)||400;saveRiskSettings(rs);const e=document.getElementById('riskMsg');if(e){e.textContent='✓ Risk settings saved';e.style.color='var(--green)'}}
 function saveSett(){saveGHConfig({owner:document.getElementById('gh_owner').value.trim(),repo:document.getElementById('gh_repo').value.trim(),token:document.getElementById('gh_token').value.trim()});const e=document.getElementById('settingsMsg');if(e){e.textContent='✓ Saved';e.style.color='var(--green)'}}
 async function testGH(){saveSett();const c=getGHConfig(),e=document.getElementById('settingsMsg');if(!c.token||!c.owner||!c.repo){if(e){e.textContent='✗ Fill all fields';e.style.color='var(--red)'}return}if(e){e.textContent='Testing...';e.style.color='var(--amber)'}try{const r=await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}`,{headers:{Authorization:`token ${c.token}`}});if(r.ok){const d=await r.json();if(e){e.innerHTML=`✓ <strong>${d.full_name}</strong>`;e.style.color='var(--green)'}}else if(e){e.textContent=`✗ ${r.status}`;e.style.color='var(--red)'}}catch(er){if(e){e.textContent='✗ Error';e.style.color='var(--red)'}}}
 function exportData(){const b=new Blob([JSON.stringify({trades,watchlist,cashflows:getCashflows(),equityHistory:getEquityHistory()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`velox_${new Date().toISOString().slice(0,10)}.json`;a.click()}
