@@ -218,6 +218,33 @@
       "closePrice": null,
       "pnl": null,
       "decimals": 3
+    },
+    {
+      "id": "mnywtsv3bktm",
+      "instrument": "Brent",
+      "assetClass": "Commodities",
+      "marginPct": 5,
+      "leverage": "1:20",
+      "direction": "long",
+      "date": "2026-04-14",
+      "timeframe": "1H",
+      "entry": 9295.5,
+      "stop": 8844.9,
+      "target": 10887.3,
+      "stake": 0.1,
+      "scores": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "notes": "",
+      "screenshot": "",
+      "status": "open",
+      "closePrice": null,
+      "pnl": null,
+      "decimals": 3
     }
   ],
   "watchlist": {
