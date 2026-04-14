@@ -41,16 +41,34 @@ const INSTRUMENTS=['Brent','Nat Gas','Gold','Silver','Copper','S&P 500','Nasdaq 
 const ALL_INSTRUMENTS_MAP={
   'Brent':'Brent Crude','Nat Gas':'Natural Gas','Gold':'Gold','Silver':'Silver','Copper':'Copper',
   'S&P 500':'S&P 500 Index','Nasdaq 100':'Nasdaq 100 Index','FTSE 100':'FTSE 100 Index','DAX 40':'DAX 40 Index','Nikkei 225':'Nikkei 225 Index','Bitcoin':'Bitcoin',
-  'SPY':'S&P 500 ETF','QQQ':'Nasdaq 100 ETF','IWM':'Small Cap ETF','MDY':'Mid Cap ETF','DIA':'Dow 30 ETF',
-  'XLK':'Tech Sector','XLF':'Financials','XLE':'Energy Sector','XLV':'Healthcare','XLI':'Industrials',
+  // US Broad
+  'SPY':'S&P 500 ETF','QQQ':'Nasdaq 100 ETF','IWM':'Small Cap','MDY':'Mid Cap','DIA':'Dow 30',
+  'IWF':'Growth','IWD':'Value','RSP':'S&P Equal Wt','VTI':'Total US Mkt',
+  // US Sectors
+  'XLK':'Tech','XLF':'Financials','XLE':'Energy','XLV':'Healthcare','XLI':'Industrials',
   'XLY':'Consumer Disc','XLP':'Consumer Staples','XLB':'Materials','XLU':'Utilities','XLRE':'Real Estate',
+  'XOP':'Oil & Gas Expl','XHB':'Homebuilders','KBE':'Regional Banks','XME':'Metals & Mining',
+  // Commodities
   'GLD':'Gold ETF','SLV':'Silver ETF','CPER':'Copper ETF','USO':'Crude Oil ETF','UNG':'Nat Gas ETF',
   'PDBC':'Broad Commod','URNM':'Uranium','DBA':'Agriculture','GDX':'Gold Miners','GDXJ':'Jr Gold Miners',
-  'EEM':'Emerging Mkts','EFA':'Intl Developed','EWJ':'Japan ETF','FXI':'China Large','VGK':'Europe ETF',
-  'INDA':'India ETF','EWZ':'Brazil ETF','TLT':'Long Bonds','HYG':'High Yield','LQD':'Inv Grade',
-  'QUAL':'Quality Factor','MTUM':'Momentum','DGRO':'Div Growth','IWF':'Growth Factor','IWD':'Value Factor',
+  'WEAT':'Wheat','CORN':'Corn','PALL':'Palladium','PPLT':'Platinum','DBB':'Base Metals',
+  // International
+  'EEM':'Emerging Mkts','EFA':'Intl Developed','EWJ':'Japan','FXI':'China Large','VGK':'Europe',
+  'INDA':'India','EWZ':'Brazil','KWEB':'China Tech','EWT':'Taiwan','EWY':'South Korea',
+  'EWG':'Germany','EWA':'Australia','EWC':'Canada','TUR':'Turkey','EIDO':'Indonesia',
+  'EWS':'Singapore','EWH':'Hong Kong','MCHI':'China Broad',
+  // Fixed Income
+  'TLT':'Long Bonds','HYG':'High Yield','LQD':'Inv Grade','SHY':'Short Treasury',
+  'IEF':'7-10yr Treasury','TIP':'TIPS Inflation','EMB':'EM Bonds','JNK':'Junk Bonds','AGG':'US Agg Bond',
+  // Factors
+  'QUAL':'Quality','MTUM':'Momentum','DGRO':'Div Growth','VLUE':'Value Factor','SIZE':'Size Factor',
+  // Thematic
   'BOTZ':'Robotics/AI','ICLN':'Clean Energy','CIBR':'Cybersecurity','ARKK':'Disruptive','MOO':'Agribusiness',
-  'XBI':'Biotech','ITA':'Defence','KWEB':'China Tech'
+  'XBI':'Biotech','ITA':'Defence','IBB':'Biotech LgCap','SMH':'Semiconductors','SOXX':'Semis Alt',
+  'IGV':'Software','SKYY':'Cloud Computing','LIT':'Lithium/Battery','REMX':'Rare Earths',
+  'PPA':'Aero & Defence','JETS':'Airlines','HACK':'Cyber Alt','PBW':'Clean Energy Alt',
+  'COPX':'Copper Miners','SIL':'Silver Miners','URA':'Uranium Alt','BATT':'Battery Tech',
+  'DRIV':'Self-Driving','FINX':'Fintech','GNOM':'Genomics','BLOK':'Blockchain'
 };
 const ALL_INSTRUMENTS=Object.keys(ALL_INSTRUMENTS_MAP);
 const INST_SHORT={Brent:'BRT','Nat Gas':'NG',Gold:'XAU',Silver:'XAG',Copper:'HG','S&P 500':'SPX','Nasdaq 100':'NQ','FTSE 100':'FTSE','DAX 40':'DAX','Nikkei 225':'NKY',Bitcoin:'BTC'};
@@ -269,27 +287,61 @@ return`<div class="chart-card" style="margin-top:16px"><h4>P&L Curve</h4><div st
 
 // ── ETF SCREENER ──
 const ETF_UNIVERSE={
-SPY:'S&P 500',QQQ:'Nasdaq 100',IWM:'Small Cap',MDY:'Mid Cap',DIA:'Dow 30',
+// US Broad (9)
+SPY:'S&P 500',QQQ:'Nasdaq 100',IWM:'Small Cap',MDY:'Mid Cap',DIA:'Dow 30',IWF:'Growth',IWD:'Value',RSP:'S&P Equal Wt',VTI:'Total US Mkt',
+// US Sectors (14)
 XLK:'Tech',XLF:'Financials',XLE:'Energy',XLV:'Healthcare',XLI:'Industrials',
 XLY:'Consumer Disc',XLP:'Consumer Staples',XLB:'Materials',XLU:'Utilities',XLRE:'Real Estate',
+XOP:'Oil & Gas Expl',XHB:'Homebuilders',KBE:'Regional Banks',XME:'Metals & Mining',
+// Commodities (15)
 GLD:'Gold',SLV:'Silver',CPER:'Copper',USO:'Crude Oil',UNG:'Nat Gas',
 PDBC:'Broad Commod',URNM:'Uranium',DBA:'Agriculture',GDX:'Gold Miners',GDXJ:'Jr Gold Miners',
+WEAT:'Wheat',CORN:'Corn',PALL:'Palladium',PPLT:'Platinum',DBB:'Base Metals',
+// International (18)
 EEM:'Emerging Mkts',EFA:'Intl Developed',EWJ:'Japan',FXI:'China Large',VGK:'Europe',
-INDA:'India',EWZ:'Brazil',TLT:'Long Bonds',HYG:'High Yield',LQD:'Inv Grade',
-QUAL:'Quality',MTUM:'Momentum',DGRO:'Div Growth',IWF:'Growth',IWD:'Value',
+INDA:'India',EWZ:'Brazil',KWEB:'China Tech',EWT:'Taiwan',EWY:'South Korea',
+EWG:'Germany',EWA:'Australia',EWC:'Canada',TUR:'Turkey',EIDO:'Indonesia',
+EWS:'Singapore',EWH:'Hong Kong',MCHI:'China Broad',
+// Fixed Income (9)
+TLT:'Long Bonds',HYG:'High Yield',LQD:'Inv Grade',SHY:'Short Treasury',
+IEF:'7-10yr Treasury',TIP:'TIPS Inflation',EMB:'EM Bonds',JNK:'Junk Bonds',AGG:'US Agg Bond',
+// Factors (5)
+QUAL:'Quality',MTUM:'Momentum',DGRO:'Div Growth',VLUE:'Value Factor',SIZE:'Size Factor',
+// Thematic (24)
 BOTZ:'Robotics/AI',ICLN:'Clean Energy',CIBR:'Cybersecurity',ARKK:'Disruptive',MOO:'Agribusiness',
-XBI:'Biotech',ITA:'Defence',KWEB:'China Tech'};
+XBI:'Biotech',ITA:'Defence',IBB:'Biotech LgCap',SMH:'Semiconductors',SOXX:'Semis Alt',
+IGV:'Software',SKYY:'Cloud Computing',LIT:'Lithium/Battery',REMX:'Rare Earths',
+PPA:'Aero & Defence',JETS:'Airlines',HACK:'Cyber Alt',PBW:'Clean Energy Alt',
+COPX:'Copper Miners',SIL:'Silver Miners',URA:'Uranium Alt',BATT:'Battery Tech',
+DRIV:'Self-Driving',FINX:'Fintech',GNOM:'Genomics',BLOK:'Blockchain'};
 const ETF_EXCHANGE={
-SPY:'AMEX',QQQ:'NASDAQ',IWM:'AMEX',MDY:'AMEX',DIA:'AMEX',
+// US Broad
+SPY:'AMEX',QQQ:'NASDAQ',IWM:'AMEX',MDY:'AMEX',DIA:'AMEX',IWF:'AMEX',IWD:'AMEX',RSP:'AMEX',VTI:'AMEX',
+// US Sectors
 XLK:'AMEX',XLF:'AMEX',XLE:'AMEX',XLV:'AMEX',XLI:'AMEX',
 XLY:'AMEX',XLP:'AMEX',XLB:'AMEX',XLU:'AMEX',XLRE:'AMEX',
+XOP:'AMEX',XHB:'AMEX',KBE:'AMEX',XME:'AMEX',
+// Commodities
 GLD:'AMEX',SLV:'AMEX',CPER:'AMEX',USO:'AMEX',UNG:'AMEX',
 PDBC:'NASDAQ',URNM:'AMEX',DBA:'AMEX',GDX:'AMEX',GDXJ:'AMEX',
+WEAT:'AMEX',CORN:'AMEX',PALL:'AMEX',PPLT:'AMEX',DBB:'AMEX',
+// International
 EEM:'AMEX',EFA:'AMEX',EWJ:'AMEX',FXI:'AMEX',VGK:'AMEX',
-INDA:'AMEX',EWZ:'AMEX',TLT:'NASDAQ',HYG:'AMEX',LQD:'AMEX',
-QUAL:'AMEX',MTUM:'AMEX',DGRO:'AMEX',IWF:'AMEX',IWD:'AMEX',
+INDA:'AMEX',EWZ:'AMEX',KWEB:'AMEX',EWT:'AMEX',EWY:'AMEX',
+EWG:'AMEX',EWA:'AMEX',EWC:'AMEX',TUR:'AMEX',EIDO:'AMEX',
+EWS:'AMEX',EWH:'AMEX',MCHI:'NASDAQ',
+// Fixed Income
+TLT:'NASDAQ',HYG:'AMEX',LQD:'AMEX',SHY:'NASDAQ',
+IEF:'NASDAQ',TIP:'AMEX',EMB:'AMEX',JNK:'AMEX',AGG:'AMEX',
+// Factors
+QUAL:'AMEX',MTUM:'AMEX',DGRO:'AMEX',VLUE:'AMEX',SIZE:'AMEX',
+// Thematic
 BOTZ:'NASDAQ',ICLN:'NASDAQ',CIBR:'AMEX',ARKK:'AMEX',MOO:'AMEX',
-XBI:'AMEX',ITA:'AMEX',KWEB:'AMEX'};
+XBI:'AMEX',ITA:'AMEX',IBB:'NASDAQ',SMH:'NASDAQ',SOXX:'NASDAQ',
+IGV:'AMEX',SKYY:'AMEX',LIT:'AMEX',REMX:'AMEX',
+PPA:'AMEX',JETS:'AMEX',HACK:'AMEX',PBW:'AMEX',
+COPX:'AMEX',SIL:'AMEX',URA:'AMEX',BATT:'AMEX',
+DRIV:'AMEX',FINX:'AMEX',GNOM:'AMEX',BLOK:'AMEX'};
 const ETF_TICKERS=Object.keys(ETF_UNIVERSE);
 const FMP_KEY='fsUwZ3RqDc7Wa2pjUyMhlLnOet1HVwUl';
 let screenerData=[];let screenerRunning=false;let screenerErrors=[];let screenerFilter={minRS:70,rsiMin:0,rsiMax:100,trendOnly:true,setupFilter:'all',volConfirm:false};let screenerSubTab='setups';
@@ -329,8 +381,13 @@ function analyzeETF(ticker,bars){
   const vol20=volumes.slice(-20).reduce((a,b)=>a+b,0)/20;
   const vol50=volumes.slice(-50).reduce((a,b)=>a+b,0)/50;
   const volRatio=vol20>0?volumes[n-1]/vol20:1;
-  // 3m return
+  // Multi-period returns for blended RS
+  const ret1m=n>=21?(cl/closes[n-21]-1)*100:0;
   const ret3m=n>=63?(cl/closes[n-63]-1)*100:0;
+  const ret6m=n>=126?(cl/closes[n-126]-1)*100:0;
+  const ret12m=n>=252?(cl/closes[n-252]-1)*100:(n>=200?(cl/closes[0]-1)*100:0);
+  // Blended RS: 40% 12m + 25% 6m + 20% 3m + 15% 1m
+  const rsRaw=ret12m*0.40+ret6m*0.25+ret3m*0.20+ret1m*0.15;
   // Trend filter
   const trendValid=cl>e50&&e50>e200&&cl>e200;
   // Trend score
@@ -356,13 +413,15 @@ function analyzeETF(ticker,bars){
       if(volDecline||!screenerFilter.volConfirm)setup='VCP';
     }
   }
-  return{ticker,close:cl,trendValid,trendScore:ts,ret3m,setup,rsi:rsiVal,atr:atrVal,
+  return{ticker,close:cl,trendValid,trendScore:ts,ret1m,ret3m,ret6m,ret12m,rsRaw,setup,rsi:rsiVal,atr:atrVal,
     pct21,pct50,pct200,pct20H,pct50H,pct20L,pct50L,range20,range50,volRatio,
     ema21:e21,ema50:e50,ema200:e200,rsScore:0,closes63:closes.slice(-63)};
 }
 
 function calcRSScores(results){
-  const sorted=[...results].sort((a,b)=>a.ret3m-b.ret3m);
+  if(results.length<2)return;
+  results.forEach(r=>{if(r.rsRaw==null)r.rsRaw=r.ret3m||0});
+  const sorted=[...results].sort((a,b)=>a.rsRaw-b.rsRaw);
   sorted.forEach((r,i)=>{r.rsScore=Math.round(i/(sorted.length-1)*100)});
   results.forEach(r=>{const m=sorted.find(s=>s.ticker===r.ticker);if(m)r.rsScore=m.rsScore});
 }
@@ -457,14 +516,17 @@ function renderScreenerTable(data){
 
   if(rows.length===0)return'<div class="empty"><p>No results matching filters</p></div>';
   return`<div class="table-wrap"><table><thead><tr>
-<th>Ticker</th><th>Close</th><th>Trend</th><th>Score</th><th>RS</th><th>3M Ret</th><th>Setup</th><th>RSI</th><th>% 21E</th><th>% 50E</th><th>% 50dH</th><th>20d Rng</th><th>50d Rng</th><th>Vol/Avg</th>
+<th>Ticker</th><th>Close</th><th>Trend</th><th>Score</th><th>RS</th><th>1M</th><th>3M</th><th>6M</th><th>12M</th><th>Setup</th><th>RSI</th><th>% 21E</th><th>% 50E</th><th>% 50dH</th><th>Vol/Avg</th>
 </tr></thead><tbody>${rows.map(r=>`<tr style="background:${setupBg(r.setup)}">
 <td style="font-weight:700;color:#fff">${r.ticker} <span style="font-weight:400;color:var(--text2);font-size:10px">${ETF_UNIVERSE[r.ticker]||''}</span></td>
 <td>$${r.close.toFixed(2)}</td>
 <td>${r.trendValid?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
 <td><span style="color:${r.trendScore>=8?'var(--green)':r.trendScore>=6?'var(--amber)':'var(--red)'};font-weight:700">${r.trendScore}</span>/10</td>
 <td><span style="color:${r.rsScore>=70?'var(--green)':r.rsScore>=40?'var(--amber)':'var(--red)'};font-weight:600">${r.rsScore}</span></td>
-<td style="color:${r.ret3m>=0?'var(--green)':'var(--red)'}">${r.ret3m>=0?'+':''}${r.ret3m.toFixed(1)}%</td>
+<td style="color:${(r.ret1m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret1m||0)>=0?'+':''}${(r.ret1m||0).toFixed(1)}%</td>
+<td style="color:${(r.ret3m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret3m||0)>=0?'+':''}${(r.ret3m||0).toFixed(1)}%</td>
+<td style="color:${(r.ret6m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret6m||0)>=0?'+':''}${(r.ret6m||0).toFixed(1)}%</td>
+<td style="color:${(r.ret12m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret12m||0)>=0?'+':''}${(r.ret12m||0).toFixed(1)}%</td>
 <td><span style="color:${setupColor(r.setup)};font-weight:700">${r.setup}</span></td>
 <td style="color:${r.rsi>70?'var(--red)':r.rsi<30?'var(--green)':'var(--text)'}">${r.rsi.toFixed(0)}</td>
 <td style="color:${Math.abs(r.pct21)<=3?'var(--green)':'var(--text2)'}">${r.pct21>=0?'+':''}${r.pct21.toFixed(1)}%</td>
@@ -558,14 +620,14 @@ function exportScreenerCSV(){
   ctx+='#\n';
   
   // Screener data
-  const headers='Ticker,Exchange,TVSymbol,Name,Close,TrendValid,TrendScore,RSScore,3MReturn,Setup,RSI,%From21EMA,%From50EMA,%From50dHigh,20dRange,50dRange,VolVsAvg,Context';
+  const headers='Ticker,Exchange,TVSymbol,Name,Close,TrendValid,TrendScore,RSScore,1MReturn,3MReturn,6MReturn,12MReturn,Setup,RSI,%From21EMA,%From50EMA,%From50dHigh,20dRange,50dRange,VolVsAvg,Context';
   const rows=data.map(r=>{
     let c='';
     const exch=ETF_EXCHANGE[r.ticker]||'AMEX';
     if(r.setup==='Pullback')c=`Pullback: ${Math.abs(r.pct21).toFixed(1)}% from 21EMA RSI ${r.rsi.toFixed(0)}`;
     else if(r.setup==='VCP')c=`VCP: range contracted ${((1-r.range20/r.range50)*100).toFixed(0)}% price ${Math.abs(r.pct50H).toFixed(1)}% from 50d high`;
     else c=`No setup: trend ${r.trendScore}/10 RS ${r.rsScore}`;
-    return[r.ticker,exch,`${exch}:${r.ticker}`,`"${ETF_UNIVERSE[r.ticker]||''}"`,r.close.toFixed(2),r.trendValid,r.trendScore,r.rsScore,r.ret3m.toFixed(2),r.setup,r.rsi.toFixed(1),r.pct21.toFixed(2),r.pct50.toFixed(2),r.pct50H.toFixed(2),r.range20.toFixed(2),r.range50.toFixed(2),r.volRatio.toFixed(2),`"${c}"`].join(',');
+    return[r.ticker,exch,`${exch}:${r.ticker}`,`"${ETF_UNIVERSE[r.ticker]||''}"`,r.close.toFixed(2),r.trendValid,r.trendScore,r.rsScore,r.ret1m.toFixed(2),r.ret3m.toFixed(2),r.ret6m.toFixed(2),r.ret12m.toFixed(2),r.setup,r.rsi.toFixed(1),r.pct21.toFixed(2),r.pct50.toFixed(2),r.pct50H.toFixed(2),r.range20.toFixed(2),r.range50.toFixed(2),r.volRatio.toFixed(2),`"${c}"`].join(',');
   });
   
   const csv=ctx+headers+'\n'+rows.join('\n');
