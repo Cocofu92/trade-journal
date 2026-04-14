@@ -299,6 +299,12 @@
       "amount": 1592.21,
       "date": "2026-04-12",
       "id": "mnvirbnqv1jo"
+    },
+    {
+      "type": "withdrawal",
+      "amount": 300,
+      "date": "2026-04-14",
+      "id": "mnywu3mlwgbl"
     }
   ],
   "equityHistory": [
