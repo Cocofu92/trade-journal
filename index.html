@@ -3,407 +3,689 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Velox Capital — ETF Screener Analysis</title>
+<title>Velox Capital — Trade Journal</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0d0f11;--bg2:#13161a;--bg3:#1a1e24;--border:#2a2f38;--text:#c8cdd5;--text2:#8891a0;--accent:#e63946;--green:#2ecc71;--red:#e74c3c;--amber:#f39c12;--blue:#3498db;--mono:'JetBrains Mono',monospace;--serif:'Source Serif 4',Georgia,serif}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;min-height:100vh;padding:20px}
-::selection{background:var(--accent);color:#fff}
-.container{max-width:1100px;margin:0 auto}
-.header{border-bottom:2px solid var(--accent);padding-bottom:16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end}
-.brand{font-size:10px;letter-spacing:4px;color:var(--accent);font-weight:700}
-h1{font-family:var(--serif);font-size:22px;font-weight:400;color:#fff;margin-top:4px}
-.date{font-size:11px;color:var(--text2);text-align:right}
-
-/* Portfolio context */
-.context{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
-.context-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px}
-.context-card h3{font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
-.ctx-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)}
-.ctx-row:last-child{border:none}
-.ctx-label{color:var(--text2)}
-.ctx-val{color:#fff;font-weight:600}
-.ctx-warn{color:var(--amber)}
-.ctx-danger{color:var(--red)}
-
-/* Tier summary */
-.tier-grid{display:grid;gap:12px;margin-bottom:24px}
-.tier-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:border-color .2s}
-.tier-card:hover{border-color:var(--text2)}
-.tier-card.tier-a{border-left:3px solid var(--green)}
-.tier-card.tier-b{border-left:3px solid var(--amber)}
-.tier-card.tier-c{border-left:3px solid var(--text2)}
-.tier-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer}
-.tier-head:hover{background:var(--bg3)}
-.tier-left{display:flex;align-items:center;gap:12px}
-.ticker{font-size:16px;font-weight:700;color:#fff;min-width:55px}
-.ticker-desc{font-size:11px;color:var(--text2)}
-.tier-badge{padding:3px 10px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px}
-.tier-badge.a{background:rgba(46,204,113,.15);color:var(--green)}
-.tier-badge.b{background:rgba(243,156,18,.15);color:var(--amber)}
-.tier-badge.c{background:rgba(136,145,160,.15);color:var(--text2)}
-.setup-tag{padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600}
-.setup-tag.vcp{background:rgba(52,152,219,.12);color:var(--blue)}
-.setup-tag.pullback{background:rgba(46,204,113,.12);color:var(--green)}
-.setup-tag.blocked{background:rgba(231,76,60,.12);color:var(--red)}
-.setup-tag.pass{background:rgba(136,145,160,.1);color:var(--text2)}
-.tier-stats{display:flex;gap:16px;font-size:11px;color:var(--text2)}
-.tier-stats span{white-space:nowrap}
-.tier-right{display:flex;align-items:center;gap:10px}
-.action-tag{padding:4px 12px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px}
-.action-tag.buy{background:rgba(46,204,113,.2);color:var(--green)}
-.action-tag.stalk{background:rgba(243,156,18,.2);color:var(--amber)}
-.action-tag.watch{background:rgba(52,152,219,.15);color:var(--blue)}
-.action-tag.pass{background:rgba(136,145,160,.1);color:var(--text2)}
-.action-tag.blocked{background:rgba(231,76,60,.15);color:var(--red)}
-
-/* Detail panel */
-.tier-detail{display:none;padding:0 16px 16px;border-top:1px solid var(--border)}
-.tier-detail.open{display:block}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
-.detail-item{background:var(--bg3);border-radius:4px;padding:10px}
-.detail-item .dl{font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
-.detail-item .dv{font-size:14px;font-weight:600;color:#fff;margin-top:3px}
-.detail-item .dv.green{color:var(--green)}.detail-item .dv.red{color:var(--red)}.detail-item .dv.amber{color:var(--amber)}.detail-item .dv.blue{color:var(--blue)}
-.detail-section{margin-top:12px}
-.detail-section h4{font-size:10px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
-.detail-text{font-size:12px;line-height:1.7;color:var(--text)}
-.detail-text strong{color:#fff}
-.risk-note{background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);border-radius:4px;padding:10px;margin-top:10px;font-size:11px;color:var(--red)}
-.corr-note{background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.2);border-radius:4px;padding:10px;margin-top:10px;font-size:11px;color:var(--amber)}
-.entry-box{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px;margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.entry-box .el{font-size:10px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase}.entry-box .ev{font-size:13px;font-weight:600;color:#fff;margin-top:2px}
-
-/* Risk notes section */
-.risk-section{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:24px}
-.risk-section h3{font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
-.risk-item{font-size:12px;line-height:1.7;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border)}
-.risk-item:last-child{border:none}
-.risk-item strong{color:#fff}
-
-.expand-icon{color:var(--text2);font-size:14px;transition:transform .2s}
-.expand-icon.open{transform:rotate(90deg)}
+:root{--bg:#0d0f11;--bg2:#13161a;--bg3:#1a1e24;--border:#2a2f38;--text:#c8cdd5;--text2:#8891a0;--accent:#e63946;--green:#2ecc71;--red:#e74c3c;--amber:#f39c12;--blue:#3498db;--mono:'JetBrains Mono',monospace;--serif:'Source Serif 4',Georgia,serif;}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;min-height:100vh}::selection{background:var(--accent);color:#fff}
+input,select,textarea{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-family:var(--mono);font-size:12px}input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}select{cursor:pointer}
+button{font-family:var(--mono);cursor:pointer;border:none;border-radius:4px;font-size:11px;padding:7px 14px;font-weight:600;transition:all .15s}button:hover{filter:brightness(1.15)}
+.header{background:var(--bg2);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}.header-left .brand{font-size:10px;letter-spacing:4px;color:var(--accent);font-weight:700}.header-left h1{font-family:var(--serif);font-size:18px;font-weight:400;color:#fff;margin-top:2px}.header-right{display:flex;gap:8px;align-items:center}.header-right button{background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-size:10px}
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto}.tab{padding:10px 20px;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}.tab:hover{color:var(--text)}.tab.active{color:#fff;border-bottom-color:var(--accent)}
+.content{max-width:1300px;margin:0 auto;padding:20px}.dashboard-grid{display:grid;grid-template-columns:1fr 300px;gap:16px}.sidebar{display:flex;flex-direction:column;gap:12px}.sidebar-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px}.sidebar-card h4{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px}.stat-card .label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}.stat-card .value{font-size:20px;font-weight:700;margin-top:4px;color:#fff}.stat-card .value.green{color:var(--green)}.stat-card .value.red{color:var(--red)}.stat-card .value.amber{color:var(--amber)}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px}thead th{text-align:left;padding:8px 10px;font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:600;white-space:nowrap}tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}tbody tr:hover{background:var(--bg3)}
+.tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px}.tag-long{background:rgba(46,204,113,.15);color:var(--green)}.tag-short{background:rgba(231,76,60,.15);color:var(--red)}.tag-win{background:rgba(46,204,113,.15);color:var(--green)}.tag-loss{background:rgba(231,76,60,.15);color:var(--red)}.tag-breakeven{background:rgba(243,156,18,.15);color:var(--amber)}.tag-open{background:rgba(52,152,219,.15);color:var(--blue)}
+.score{font-weight:700}.score-high{color:var(--green)}.score-med{color:var(--amber)}.score-low{color:var(--red)}
+.form-section{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px;margin-bottom:16px}.form-section h3{font-family:var(--serif);font-size:16px;color:#fff;margin-bottom:16px;font-weight:600}.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.form-group{display:flex;flex-direction:column;gap:4px}.form-group label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}.form-group input,.form-group select,.form-group textarea{width:100%}.form-group textarea{min-height:60px;resize:vertical}.form-full{grid-column:1/-1}
+.form-actions{margin-top:16px;display:flex;gap:10px}.btn-primary{background:var(--accent);color:#fff;padding:9px 24px;font-size:12px}.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.btn-danger{background:var(--red);color:#fff}.btn-sm{padding:4px 10px;font-size:10px}
+.calc-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}.calc-item .label{font-size:10px;color:var(--text2)}.calc-item .val{font-size:16px;font-weight:700;color:#fff;margin-top:2px}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.score-item{display:flex;flex-direction:column;gap:4px}.score-item label{font-size:9px;color:var(--text2);letter-spacing:.5px}.score-item select{padding:5px;font-size:11px}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}.section-header h3{font-family:var(--serif);font-size:16px;color:#fff;font-weight:600}.empty{text-align:center;padding:40px 20px;color:var(--text2)}.empty p{margin-top:8px;font-size:12px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px}.chart-card h4{font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}.bar-label{width:60px;font-size:11px;color:var(--text2);text-align:right;flex-shrink:0}.bar-track{flex:1;height:18px;background:var(--bg);border-radius:3px;overflow:hidden}.bar-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;font-size:10px;font-weight:600;color:#fff;min-width:20px}.bar-fill.green{background:var(--green)}.bar-fill.red{background:var(--red)}
+.wl-grid{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden}.wl-row{display:grid;grid-template-columns:110px 100px 1fr 60px;gap:0;background:var(--bg2);align-items:center}.wl-row.wl-header{background:var(--bg3)}.wl-row>div{padding:8px 10px;font-size:11px}.wl-inst{font-weight:600;color:#fff}.wl-note{color:var(--text2);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.status-nip{background:var(--border)}.status-watching{background:var(--blue)}.status-stalking{background:var(--amber)}.status-live{background:var(--green)}.status-tp{background:var(--accent)}
+.risk-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}.risk-row:last-child{border-bottom:none}.risk-pct{font-size:10px;color:var(--text2);margin-left:4px}
+.corr-table{width:100%;border-collapse:collapse;font-size:9px}.corr-table th,.corr-table td{padding:4px 3px;text-align:center;border:1px solid var(--border)}.corr-table th{color:var(--text2);font-weight:600;background:var(--bg3)}.corr-high{background:rgba(231,76,60,.2);color:var(--red);font-weight:700}.corr-med{background:rgba(243,156,18,.15);color:var(--amber)}.corr-low{background:rgba(52,152,219,.1);color:var(--text2)}.corr-neg{background:rgba(46,204,113,.1);color:var(--green)}.corr-self{background:var(--bg3);color:var(--text2)}
+.equity-input{display:flex;gap:6px;align-items:center;margin-bottom:10px}.equity-input input{width:120px;font-size:13px;font-weight:600}
+.inst-search{position:relative}.inst-search input{width:100%}.inst-dropdown{position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:var(--bg2);border:1px solid var(--accent);border-radius:0 0 4px 4px;z-index:50;display:none}.inst-dropdown.open{display:block}.inst-option{padding:7px 10px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between}.inst-option:hover,.inst-option.highlighted{background:var(--bg3)}.inst-option .inst-desc{color:var(--text2);font-size:10px}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.chart-grid{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}.score-grid{grid-template-columns:repeat(3,1fr)}.wl-row{grid-template-columns:90px 80px 1fr 50px}}
 </style>
 </head>
 <body>
-<div class="container">
-
-<div class="header">
-<div>
-<div class="brand">VELOX CAPITAL</div>
-<h1>ETF Screener Analysis</h1>
-</div>
-<div class="date">14 April 2026<br>Live TradingView Data</div>
-</div>
-
-<!-- PORTFOLIO CONTEXT -->
-<div class="context">
-<div class="context-card">
-<h3>Account</h3>
-<div class="ctx-row"><span class="ctx-label">Equity</span><span class="ctx-val">£1,475.06</span></div>
-<div class="ctx-row"><span class="ctx-label">Deposited</span><span class="ctx-val">£1,592.21</span></div>
-<div class="ctx-row"><span class="ctx-label">Live Risk</span><span class="ctx-val ctx-danger">£544.52 (36.9%)</span></div>
-<div class="ctx-row"><span class="ctx-label">Risk Mode</span><span class="ctx-val">£100/trade · £200/inst · £400/corr</span></div>
-</div>
-<div class="context-card">
-<h3>Open Positions</h3>
-<div class="ctx-row"><span class="ctx-label">Brent ×3 LONG</span><span class="ctx-val ctx-warn">£365.32 / £400</span></div>
-<div class="ctx-row"><span class="ctx-label">Nat Gas ×1 LONG</span><span class="ctx-val ctx-warn">£179.20 / £200</span></div>
-<div class="ctx-row"><span class="ctx-label">Brent headroom</span><span class="ctx-val ctx-danger">£34.68</span></div>
-<div class="ctx-row"><span class="ctx-label">Nat Gas headroom</span><span class="ctx-val ctx-danger">£20.80</span></div>
-</div>
-</div>
-
-<!-- TIER CARDS -->
-<div class="tier-grid">
-
-<!-- EWT -->
-<div class="tier-card tier-a" id="card-ewt">
-<div class="tier-head" onclick="toggle('ewt')">
-<div class="tier-left">
-<span class="ticker">EWT</span>
-<span class="ticker-desc">Taiwan</span>
-<span class="tier-badge a">A-TIER</span>
-<span class="setup-tag vcp">VCP</span>
-<div class="tier-stats"><span>Score 10</span><span>RS 80</span><span>RSI 70</span><span>$79.94</span></div>
-</div>
-<div class="tier-right"><span class="action-tag buy">BUY NOW</span><span class="expand-icon" id="icon-ewt">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-ewt">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">Break $79.96</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$76.50</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$3.50</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~38 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv green">None</div></div>
-<div class="detail-item"><div class="dl">Weekly RSI</div><div class="dv amber">71 ⚠</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">VCP triggering in real time — price is <strong>$0.02 below the 52-week high</strong>. Daily and weekly MAs are the cleanest stack of all scanned instruments. Four-week sideways consolidation ($69–$73) has resolved into a breakout week. AVWAP at $71.63 confirms strong accumulation base well below.</div></div>
-<div class="risk-note">⚠ Weekly RSI 71.11 — overbought. If this breakout fails, it fails fast. Non-negotiable tight stop at $76.50.</div>
-</div>
-</div>
-
-<!-- XME -->
-<div class="tier-card tier-b" id="card-xme">
-<div class="tier-head" onclick="toggle('xme')">
-<div class="tier-left">
-<span class="ticker">XME</span>
-<span class="ticker-desc">Metals & Mining</span>
-<span class="tier-badge b">B+</span>
-<span class="setup-tag pullback">PULLBACK</span>
-<div class="tier-stats"><span>Score 9</span><span>RS 83</span><span>RSI 58</span><span>$114.97</span></div>
-</div>
-<div class="tier-right"><span class="action-tag watch">WATCH</span><span class="expand-icon" id="icon-xme">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-xme">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">Close &gt;$116 on vol</div></div>
-<div class="detail-item"><div class="dl">Alt Entry</div><div class="dv blue">Pullback to $112–$113</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$109.50</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">$5–$6.50</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~20–26 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv amber">Metals sector</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">Best weekly MA structure of the entire B-tier. Last 5 daily bars show genuine <strong>range compression: $2.50 on a $115 stock</strong> — a mini-VCP forming within the pullback. MA cluster at $111–$112 acting as floor. Today opened $116.30, hit $116.85, closed $114.97 — mild intraday rejection at the highs.</div></div>
-<div class="corr-note">⚠ Metals sector — check against SLV/PPLT if adding multiple metals names.</div>
-</div>
-</div>
-
-<!-- ITA -->
-<div class="tier-card tier-b" id="card-ita">
-<div class="tier-head" onclick="toggle('ita')">
-<div class="tier-left">
-<span class="ticker">ITA</span>
-<span class="ticker-desc">Defence</span>
-<span class="tier-badge b">B+</span>
-<span class="setup-tag pullback">PULLBACK</span>
-<div class="tier-stats"><span>Score 9</span><span>RS 72</span><span>RSI 58</span><span>$235.40</span></div>
-</div>
-<div class="tier-right"><span class="action-tag stalk">STALK</span><span class="expand-icon" id="icon-ita">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-ita">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">$232–$235</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$226.50</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$8.50</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~15 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv green">None ✓</div></div>
-<div class="detail-item"><div class="dl">Diversification</div><div class="dv green">Excellent</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">Shallow pullback (–6% from 52-week high) with the <strong>tightest daily range compression of all scanned instruments</strong> — 3.1% over 5 days on a $235 stock. Consolidating above the $228–$229 MA cluster. Weekly AVWAP $235.16 essentially at current price. Defence spending is a dominant 2025–26 theme (NATO 2%, European rearmament). <strong>Zero correlation with existing Brent/NatGas book</strong> — adds genuine diversification.</div></div>
-</div>
-</div>
-
-<!-- ICLN -->
-<div class="tier-card tier-b" id="card-icln">
-<div class="tier-head" onclick="toggle('icln')">
-<div class="tier-left">
-<span class="ticker">ICLN</span>
-<span class="ticker-desc">Clean Energy</span>
-<span class="tier-badge b">B+</span>
-<span class="setup-tag vcp">VCP</span>
-<div class="tier-stats"><span>Score 10</span><span>RS 79</span><span>RSI 65</span><span>$19.65</span></div>
-</div>
-<div class="tier-right"><span class="action-tag watch">AFTER EWT</span><span class="expand-icon" id="icon-icln">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-icln">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">Break &gt;$19.75</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$17.85</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$1.90</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~69 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv amber">Growth/EM</div></div>
-<div class="detail-item"><div class="dl">Weekly RSI</div><div class="dv">67.8</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">Also triggering today — price $0.09 below the 52-week high. Daily MAs are <strong>properly stacked</strong> (unlike SLV/PPLT/URNM which show inversion). Volume relative at 103 — above average, supporting the breakout. Weekly RSI 67.83, less overbought than EWT. Take EWT first; ICLN is the valid second entry if risk limits allow.</div></div>
-<div class="corr-note">⚠ Clean energy / growth — same macro theme as EWT. Check concentration before running both.</div>
-</div>
-</div>
-
-<!-- REMX -->
-<div class="tier-card tier-b" id="card-remx">
-<div class="tier-head" onclick="toggle('remx')">
-<div class="tier-left">
-<span class="ticker">REMX</span>
-<span class="ticker-desc">Rare Earths</span>
-<span class="tier-badge b">B+</span>
-<span class="setup-tag vcp">VCP</span>
-<div class="tier-stats"><span>Score 10</span><span>RS 99</span><span>RSI 58</span><span>$98.68</span></div>
-</div>
-<div class="tier-right"><span class="action-tag watch">WAIT</span><span class="expand-icon" id="icon-remx">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-remx">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">Close &gt;$103.68 on vol</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$94.00</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$10</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~13 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv green">None</div></div>
-<div class="detail-item"><div class="dl">RS Rank</div><div class="dv green">99 (2nd highest)</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">RS 99 — second highest on entire board. VCP range contracted 18%. Trigger at <strong>$103.68 = 50-day high</strong>. Last 5 daily bars show 3-day tight consolidation ($92–$95), then a big break to $99, now consolidating.</div></div>
-<div class="risk-note">⚠ DO NOT chase at $98.68 (11% above daily MA cluster). The $103–$104 zone is heavy overhead supply from a prior crash high. Everyone who bought the previous run and held through the –68% crash is near breakeven here. Wait for clean break above $103.68 to confirm supply absorption.</div>
-</div>
-</div>
-
-<!-- SLV -->
-<div class="tier-card tier-b" id="card-slv">
-<div class="tier-head" onclick="toggle('slv')">
-<div class="tier-left">
-<span class="ticker">SLV</span>
-<span class="ticker-desc">Silver</span>
-<span class="tier-badge b">B+</span>
-<span class="setup-tag pullback">CRASH RECOVERY</span>
-<div class="tier-stats"><span>Score 8</span><span>RS 96</span><span>RSI 55</span><span>$71.75</span></div>
-</div>
-<div class="tier-right"><span class="action-tag watch">VOL CONFIRM</span><span class="expand-icon" id="icon-slv">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-slv">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">$71.50–$72.50</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$67.80</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$4</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~33 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv amber">Metals</div></div>
-<div class="detail-item"><div class="dl">Context</div><div class="dv amber">–18% crash recovery</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">RS 96 — very strong. Today's candle is the trigger signal — strong move from $70.33 to $71.75, <strong>reclaiming the 50 SMA ($70.06) from below</strong> in one session. This is a crash recovery, not a clean trend pullback. SLV crashed –18% in a single week five weeks ago. Daily MA inversion (MA#1 below MA#2) is the footprint of that crash. Wait for daily close above $72 on above-average volume to confirm the reclaim is holding.</div></div>
-</div>
-</div>
-
-<!-- URNM -->
-<div class="tier-card tier-b" id="card-urnm">
-<div class="tier-head" onclick="toggle('urnm')">
-<div class="tier-left">
-<span class="ticker">URNM</span>
-<span class="ticker-desc">Uranium</span>
-<span class="tier-badge b">B</span>
-<span class="setup-tag pullback">CRASH RECOVERY</span>
-<div class="tier-stats"><span>Score 9</span><span>RS 84</span><span>RSI 55</span><span>$66.49</span></div>
-</div>
-<div class="tier-right"><span class="action-tag watch">WATCH</span><span class="expand-icon" id="icon-urnm">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-urnm">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">$65.00–$66.50</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$62.50</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$4</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~33 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv green">None</div></div>
-<div class="detail-item"><div class="dl">From 52w High</div><div class="dv red">–21.7%</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">Weekly MA stack properly ordered — best of the B-tier names on weekly. RSI 55 on both timeframes, holding above 50. V-recovery from crash double-bottom at $57.24/$57.67. Above-average volume today (relative vol 116). <strong>–21.7% from 52-week high = significant overhead supply.</strong></div></div>
-</div>
-</div>
-
-<!-- PBW -->
-<div class="tier-card tier-b" id="card-pbw">
-<div class="tier-head" onclick="toggle('pbw')">
-<div class="tier-left">
-<span class="ticker">PBW</span>
-<span class="ticker-desc">Clean Energy Alt</span>
-<span class="tier-badge b">B</span>
-<span class="setup-tag vcp">VCP FORMING</span>
-<div class="tier-stats"><span>Score 9</span><span>RS 88</span><span>RSI 62</span><span>$34.26</span></div>
-</div>
-<div class="tier-right"><span class="action-tag watch">WAIT</span><span class="expand-icon" id="icon-pbw">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-pbw">
-<div class="detail-grid">
-<div class="detail-item"><div class="dl">Entry</div><div class="dv green">Break &gt;$35.50</div></div>
-<div class="detail-item"><div class="dl">Stop</div><div class="dv red">$32.00</div></div>
-<div class="detail-item"><div class="dl">Risk/Share</div><div class="dv">~$3.50</div></div>
-<div class="detail-item"><div class="dl">Position Size</div><div class="dv">~37 shares</div></div>
-<div class="detail-item"><div class="dl">Correlation</div><div class="dv amber">Clean energy</div></div>
-<div class="detail-item"><div class="dl">Trigger Distance</div><div class="dv">3.4% above</div></div>
-</div>
-<div class="detail-section"><h4>Setup</h4>
-<div class="detail-text">VCP in progress, <strong>not yet at trigger</strong>. Range contracted 18%, price 3.4% from 50-day high ($35.44). Daily MA cluster ($32.38–$32.52) is tight double support. Do not buy below the trigger.</div></div>
-<div class="corr-note">⚠ Clean energy — same theme as ICLN. Check concentration before running both.</div>
-</div>
-</div>
-
-<!-- PPLT -->
-<div class="tier-card tier-c" id="card-pplt">
-<div class="tier-head" onclick="toggle('pplt')">
-<div class="tier-left">
-<span class="ticker">PPLT</span>
-<span class="ticker-desc">Platinum</span>
-<span class="tier-badge c">C — PASS</span>
-<span class="setup-tag pass">CHOPPY</span>
-<div class="tier-stats"><span>Score 9</span><span>RS 87</span><span>RSI 55</span><span>$190.06</span></div>
-</div>
-<div class="tier-right"><span class="action-tag pass">PASS</span><span class="expand-icon" id="icon-pplt">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-pplt">
-<div class="detail-text">Daily MA inversion present. Price oscillating around $187 for 5 days with no clean directionality. Average daily volume only 851k; today ~117k (extremely thin). Wide spreads, meaningful slippage risk. Pass until a clean base forms above $187 for a week+ with improved volume.</div>
-</div>
-</div>
-
-<!-- PDBC -->
-<div class="tier-card tier-c" id="card-pdbc">
-<div class="tier-head" onclick="toggle('pdbc')">
-<div class="tier-left">
-<span class="ticker">PDBC</span>
-<span class="ticker-desc">Broad Commod</span>
-<span class="tier-badge c">C — BLOCKED</span>
-<span class="setup-tag blocked">CORR BLOCKED</span>
-<div class="tier-stats"><span>Score 10</span><span>RS 73</span><span>W-RSI 75 ⚠</span></div>
-</div>
-<div class="tier-right"><span class="action-tag blocked">BLOCKED</span><span class="expand-icon" id="icon-pdbc">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-pdbc">
-<div class="risk-note">BLOCKED: Correlates 0.85 with USO/Brent. Brent corr group at £365/£400 with only £34.68 headroom — below £100 minimum per trade. Weekly RSI 74.66 — most overbought weekly reading of all instruments scanned. Do not trade without moving a Brent position to BE first.</div>
-</div>
-</div>
-
-<!-- XOP -->
-<div class="tier-card tier-c" id="card-xop">
-<div class="tier-head" onclick="toggle('xop')">
-<div class="tier-left">
-<span class="ticker">XOP</span>
-<span class="ticker-desc">Oil & Gas Expl</span>
-<span class="tier-badge c">C — PASS</span>
-<span class="setup-tag pass">WEAK</span>
-<div class="tier-stats"><span>Score 6</span><span>RS 77</span><span>RSI 41</span></div>
-</div>
-<div class="tier-right"><span class="action-tag pass">PASS</span><span class="expand-icon" id="icon-xop">▸</span></div>
-</div>
-<div class="tier-detail" id="detail-xop">
-<div class="detail-text">Price below 21 EMA. RSI 41.4. Correlated with Brent (same group already at £365/£400). TrendScore 6 is the weakest valid score on the board. Triple disqualifier: sub-21EMA, RSI 41, corr group full.</div>
-</div>
-</div>
-
-</div>
-
-<!-- RISK NOTES -->
-<div class="risk-section">
-<h3>⚠ Portfolio Risk Notes</h3>
-<div class="risk-item"><strong>Brent corr group</strong> (Brent ×3 + USO/XOP/PDBC): £365/£400 — DO NOT add any oil-correlated name without moving a Brent to BE first.</div>
-<div class="risk-item"><strong>Metals concentration:</strong> SLV + XME + URNM + REMX would be 4 metals/commodity positions — monitor group risk even if individual limits are clear.</div>
-<div class="risk-item"><strong>Clean energy concentration:</strong> EWT + ICLN + PBW = 3 growth/clean energy names — stagger entries, don't open all at once.</div>
-<div class="risk-item"><strong>ITA adds genuine diversification</strong> — defence is uncorrelated to the commodity/EM theme dominating the rest of the watchlist. Prioritise for portfolio balance.</div>
-</div>
-
-</div>
-
+<div class="header"><div class="header-left"><div class="brand">VELOX CAPITAL</div><h1>Trade Journal</h1></div><div class="header-right"><span id="syncStatus" style="font-size:10px;color:var(--text2)"></span><button onclick="syncFromGitHub()">⟳ SYNC</button><button onclick="exportData()">⬇ EXPORT</button><button onclick="document.getElementById('importFile').click()">⬆ IMPORT</button><input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)"><button onclick="currentTab='settings';document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));render();">⚙</button></div></div>
+<div class="tabs" id="tabs"><div class="tab active" data-tab="dashboard">Dashboard</div><div class="tab" data-tab="screener">ETF Screener</div><div class="tab" data-tab="new">+ New Trade</div><div class="tab" data-tab="open">Open</div><div class="tab" data-tab="journal">Journal</div><div class="tab" data-tab="stats">Stats</div></div>
+<div class="content" id="content"></div>
 <script>
-function toggle(id){
-  const d=document.getElementById('detail-'+id);
-  const i=document.getElementById('icon-'+id);
-  d.classList.toggle('open');
-  i.classList.toggle('open');
+const INSTRUMENTS=['Brent','Nat Gas','Gold','Silver','Copper','S&P 500','Nasdaq 100','FTSE 100','DAX 40','Nikkei 225','Bitcoin'];
+const ALL_INSTRUMENTS_MAP={
+  'Brent':'Brent Crude','Nat Gas':'Natural Gas','Gold':'Gold','Silver':'Silver','Copper':'Copper',
+  'S&P 500':'S&P 500 Index','Nasdaq 100':'Nasdaq 100 Index','FTSE 100':'FTSE 100 Index','DAX 40':'DAX 40 Index','Nikkei 225':'Nikkei 225 Index','Bitcoin':'Bitcoin',
+  // US Broad
+  'SPY':'S&P 500 ETF','QQQ':'Nasdaq 100 ETF','IWM':'Small Cap','MDY':'Mid Cap','DIA':'Dow 30',
+  'IWF':'Growth','IWD':'Value','RSP':'S&P Equal Wt','VTI':'Total US Mkt',
+  // US Sectors
+  'XLK':'Tech','XLF':'Financials','XLE':'Energy','XLV':'Healthcare','XLI':'Industrials',
+  'XLY':'Consumer Disc','XLP':'Consumer Staples','XLB':'Materials','XLU':'Utilities','XLRE':'Real Estate',
+  'XOP':'Oil & Gas Expl','XHB':'Homebuilders','KBE':'Regional Banks','XME':'Metals & Mining',
+  // Commodities
+  'GLD':'Gold ETF','SLV':'Silver ETF','CPER':'Copper ETF','USO':'Crude Oil ETF','UNG':'Nat Gas ETF',
+  'PDBC':'Broad Commod','URNM':'Uranium','DBA':'Agriculture','GDX':'Gold Miners','GDXJ':'Jr Gold Miners',
+  'WEAT':'Wheat','CORN':'Corn','PALL':'Palladium','PPLT':'Platinum','DBB':'Base Metals',
+  // International
+  'EEM':'Emerging Mkts','EFA':'Intl Developed','EWJ':'Japan','FXI':'China Large','VGK':'Europe',
+  'INDA':'India','EWZ':'Brazil','KWEB':'China Tech','EWT':'Taiwan','EWY':'South Korea',
+  'EWG':'Germany','EWA':'Australia','EWC':'Canada','TUR':'Turkey','EIDO':'Indonesia',
+  'EWS':'Singapore','EWH':'Hong Kong','MCHI':'China Broad',
+  // Fixed Income
+  'TLT':'Long Bonds','HYG':'High Yield','LQD':'Inv Grade','SHY':'Short Treasury',
+  'IEF':'7-10yr Treasury','TIP':'TIPS Inflation','EMB':'EM Bonds','JNK':'Junk Bonds','AGG':'US Agg Bond',
+  // Factors
+  'QUAL':'Quality','MTUM':'Momentum','DGRO':'Div Growth','VLUE':'Value Factor','SIZE':'Size Factor',
+  // Thematic
+  'BOTZ':'Robotics/AI','ICLN':'Clean Energy','CIBR':'Cybersecurity','ARKK':'Disruptive','MOO':'Agribusiness',
+  'XBI':'Biotech','ITA':'Defence','IBB':'Biotech LgCap','SMH':'Semiconductors','SOXX':'Semis Alt',
+  'IGV':'Software','SKYY':'Cloud Computing','LIT':'Lithium/Battery','REMX':'Rare Earths',
+  'PPA':'Aero & Defence','JETS':'Airlines','HACK':'Cyber Alt','PBW':'Clean Energy Alt',
+  'COPX':'Copper Miners','SIL':'Silver Miners','URA':'Uranium Alt','BATT':'Battery Tech',
+  'DRIV':'Self-Driving','FINX':'Fintech','GNOM':'Genomics','BLOK':'Blockchain'
+};
+const ALL_INSTRUMENTS=Object.keys(ALL_INSTRUMENTS_MAP);
+const INST_SHORT={Brent:'BRT','Nat Gas':'NG',Gold:'XAU',Silver:'XAG',Copper:'HG','S&P 500':'SPX','Nasdaq 100':'NQ','FTSE 100':'FTSE','DAX 40':'DAX','Nikkei 225':'NKY',Bitcoin:'BTC'};
+const CRITERIA=['Trend','Squeeze','VWAP','RSI','EMA Align'],TIMEFRAMES=['1H','4H','Daily','Weekly'];
+const STATUSES=['NOT IN PLAY','WATCHING','STALKING','LIVE','TAKING PROFIT'];
+const STATUS_CSS={'NOT IN PLAY':'nip',WATCHING:'watching',STALKING:'stalking',LIVE:'live','TAKING PROFIT':'tp'};
+const MARGIN_MAP={Brent:{class:'Commodities',margin:5,leverage:'1:20'},'Nat Gas':{class:'Commodities',margin:5,leverage:'1:20'},Gold:{class:'Commodities',margin:5,leverage:'1:20'},Silver:{class:'Commodities',margin:5,leverage:'1:20'},Copper:{class:'Commodities',margin:5,leverage:'1:20'},'S&P 500':{class:'Indices',margin:5,leverage:'1:20'},'Nasdaq 100':{class:'Indices',margin:5,leverage:'1:20'},'FTSE 100':{class:'Indices',margin:5,leverage:'1:20'},'DAX 40':{class:'Indices',margin:5,leverage:'1:20'},'Nikkei 225':{class:'Indices',margin:5,leverage:'1:20'},Bitcoin:{class:'Crypto',margin:100,leverage:'1:1'}};
+const CORR={Brent:{Brent:-1,'Nat Gas':3,Gold:1,Silver:1,Copper:2,'S&P 500':0,'Nasdaq 100':0,'FTSE 100':1,'DAX 40':1,'Nikkei 225':1,Bitcoin:1},'Nat Gas':{Brent:3,'Nat Gas':-1,Gold:1,Silver:1,Copper:1,'S&P 500':0,'Nasdaq 100':0,'FTSE 100':1,'DAX 40':1,'Nikkei 225':1,Bitcoin:1},Gold:{Brent:1,'Nat Gas':1,Gold:-1,Silver:3,Copper:2,'S&P 500':0,'Nasdaq 100':0,'FTSE 100':1,'DAX 40':1,'Nikkei 225':1,Bitcoin:2},Silver:{Brent:1,'Nat Gas':1,Gold:3,Silver:-1,Copper:2,'S&P 500':0,'Nasdaq 100':0,'FTSE 100':1,'DAX 40':1,'Nikkei 225':1,Bitcoin:2},Copper:{Brent:2,'Nat Gas':1,Gold:2,Silver:2,Copper:-1,'S&P 500':2,'Nasdaq 100':2,'FTSE 100':2,'DAX 40':2,'Nikkei 225':2,Bitcoin:2},'S&P 500':{Brent:0,'Nat Gas':0,Gold:0,Silver:0,Copper:2,'S&P 500':-1,'Nasdaq 100':3,'FTSE 100':3,'DAX 40':3,'Nikkei 225':3,Bitcoin:2},'Nasdaq 100':{Brent:0,'Nat Gas':0,Gold:0,Silver:0,Copper:2,'S&P 500':3,'Nasdaq 100':-1,'FTSE 100':2,'DAX 40':3,'Nikkei 225':3,Bitcoin:3},'FTSE 100':{Brent:1,'Nat Gas':1,Gold:1,Silver:1,Copper:2,'S&P 500':3,'Nasdaq 100':2,'FTSE 100':-1,'DAX 40':3,'Nikkei 225':2,Bitcoin:1},'DAX 40':{Brent:1,'Nat Gas':1,Gold:1,Silver:1,Copper:2,'S&P 500':3,'Nasdaq 100':3,'FTSE 100':3,'DAX 40':-1,'Nikkei 225':3,Bitcoin:1},'Nikkei 225':{Brent:1,'Nat Gas':1,Gold:1,Silver:1,Copper:2,'S&P 500':3,'Nasdaq 100':3,'FTSE 100':2,'DAX 40':3,'Nikkei 225':-1,Bitcoin:2},Bitcoin:{Brent:1,'Nat Gas':1,Gold:2,Silver:2,Copper:2,'S&P 500':2,'Nasdaq 100':3,'FTSE 100':1,'DAX 40':1,'Nikkei 225':2,Bitcoin:-1}};
+function corrClass(v){return v===-1?'corr-self':v===3?'corr-high':v===2?'corr-med':v===0?'corr-neg':'corr-low'}function corrLabel(v){return v===-1?'—':v===3?'HIGH':v===2?'MED':v===0?'NEG':'LOW'}function getMargin(i){return MARGIN_MAP[i]||{class:'ETF',margin:20,leverage:'1:5'}}
+
+let trades=JSON.parse(localStorage.getItem('velox_trades')||'[]'),watchlist=JSON.parse(localStorage.getItem('velox_watchlist')||'{}'),currentTab='dashboard',editingId=null,fileSha=null;
+INSTRUMENTS.forEach(i=>{if(!watchlist[i])watchlist[i]={status:'NOT IN PLAY',note:''}});
+function getCashflows(){return JSON.parse(localStorage.getItem('velox_cashflows')||'[]')}function saveCashflows(cf){localStorage.setItem('velox_cashflows',JSON.stringify(cf))}
+function addCashflow(type,amount,date){const cf=getCashflows();cf.push({type,amount,date:date||new Date().toISOString().slice(0,10),id:genId()});saveCashflows(cf)}
+function removeCashflow(id){const cf=getCashflows().filter(c=>c.id!==id);saveCashflows(cf)}
+function getTotalDeposited(){return getCashflows().reduce((s,c)=>s+(c.type==='deposit'?c.amount:-c.amount),0)}
+function getEquity(){const deposited=getTotalDeposited();const realizedPnL=closedTrades().reduce((s,t)=>s+(t.pnl||0),0);return deposited+realizedPnL}
+function getEquityHistory(){return JSON.parse(localStorage.getItem('velox_equity_history')||'[]')}
+
+// Simple return: total P&L / total deposited
+function getSimpleReturn(){const dep=getTotalDeposited();const pnl=closedTrades().reduce((s,t)=>s+(t.pnl||0),0);return dep>0?(pnl/dep*100):0}
+
+// Time-weighted return: chain returns between each cashflow event
+function getTimeWeightedReturn(){
+  const cf=getCashflows().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const closed=closedTrades().slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(cf.length===0||closed.length===0)return 0;
+  // Build timeline of all events sorted by date
+  const events=[];
+  cf.forEach(c=>events.push({date:c.date,type:'cf',amount:c.type==='deposit'?c.amount:-c.amount}));
+  closed.forEach(t=>events.push({date:t.date||'',type:'trade',pnl:t.pnl||0}));
+  events.sort((a,b)=>a.date.localeCompare(b.date));
+  // Walk through events tracking balance and chaining sub-period returns
+  let balance=0;let twrProduct=1;let periodStart=0;
+  for(const ev of events){
+    if(ev.type==='trade'){
+      balance+=ev.pnl;
+    }else if(ev.type==='cf'){
+      // Before applying cashflow, calculate return for this sub-period
+      if(periodStart>0){
+        const periodReturn=balance/periodStart;
+        twrProduct*=periodReturn;
+      }
+      // Apply cashflow
+      balance+=ev.amount;
+      periodStart=balance; // reset starting balance for next period
+      if(periodStart<=0)periodStart=balance>0?balance:0;
+    }
+  }
+  // Final period: from last cashflow to now
+  if(periodStart>0){
+    const finalReturn=balance/periodStart;
+    twrProduct*=finalReturn;
+  }
+  return(twrProduct-1)*100;
 }
-// Open the A-tier by default
-toggle('ewt');
+function addEquitySnapshot(eq,date){const h=getEquityHistory();h.push({equity:eq,deposited:getTotalDeposited(),date:date||new Date().toISOString().slice(0,10)});localStorage.setItem('velox_equity_history',JSON.stringify(h))}
+
+// Risk settings
+function getRiskSettings(){return JSON.parse(localStorage.getItem('velox_risk_settings')||'{"mode":"fixed","perTrade":100,"perInstrument":200,"perCorrGroup":400}')}
+function saveRiskSettings(s){localStorage.setItem('velox_risk_settings',JSON.stringify(s))}
+function getRiskLimit(type){const s=getRiskSettings();const eq=getEquity();if(s.mode==='pct')return type==='trade'?eq*0.02:type==='instrument'?eq*0.02:eq*0.04;return type==='trade'?s.perTrade:type==='instrument'?s.perInstrument:s.perCorrGroup}
+function getRiskLabel(){const s=getRiskSettings();return s.mode==='fixed'?`£${s.perTrade}/trade · £${s.perInstrument}/instrument · £${s.perCorrGroup}/corr group`:`2%/trade · 2%/instrument · 4%/corr group`}
+function save(){localStorage.setItem('velox_trades',JSON.stringify(trades));localStorage.setItem('velox_watchlist',JSON.stringify(watchlist));syncToGitHub()}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}function openTrades(){return trades.filter(t=>t.status==='open')}function closedTrades(){return trades.filter(t=>t.status!=='open')}function calcRisk(t){return(!t.entry||!t.stop||!t.stake)?0:Math.abs(t.entry-t.stop)*t.stake}function calcLiveRisk(t){return t.breakeven?0:calcRisk(t)}function calcRR(t){if(!t.entry||!t.stop||!t.target)return 0;const r=Math.abs(t.entry-t.stop);return r===0?0:Math.abs(t.target-t.entry)/r}function totalScore(t){return(t.scores||[0,0,0,0,0]).reduce((a,b)=>a+b,0)}function sizeRule(s){return s>=8?'FULL':s>=6?'HALF':'NO TRADE'}function fmt(n,d=2){if(n==null||isNaN(n))return'—';return Number(n).toLocaleString('en-GB',{minimumFractionDigits:d,maximumFractionDigits:d})}function fmtGBP(n){if(n==null||isNaN(n))return'—';return(n>=0?'+':'')+'\u00A3'+Math.abs(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+function getGHConfig(){return JSON.parse(localStorage.getItem('velox_gh_config')||'{}')}function saveGHConfig(c){localStorage.setItem('velox_gh_config',JSON.stringify(c))}function setSyncStatus(m,c){const e=document.getElementById('syncStatus');if(e){e.textContent=m;e.style.color=c||'var(--text2)'}}
+async function syncToGitHub(){const c=getGHConfig();if(!c.token||!c.owner||!c.repo)return;setSyncStatus('Pushing...','var(--amber)');try{const p={trades,watchlist,cashflows:getCashflows(),equityHistory:getEquityHistory()};const ct=btoa(unescape(encodeURIComponent(JSON.stringify(p,null,2))));const b={message:`journal update ${new Date().toISOString().slice(0,16)}`,content:ct};if(fileSha)b.sha=fileSha;const r=await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/data/trades.json`,{method:'PUT',headers:{Authorization:`token ${c.token}`,'Content-Type':'application/json'},body:JSON.stringify(b)});if(r.ok){const d=await r.json();fileSha=d.content.sha;setSyncStatus('✓ '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),'var(--green)')}else setSyncStatus('✗ Push failed','var(--red)')}catch(e){setSyncStatus('✗ Error','var(--red)')}}
+async function syncFromGitHub(){const c=getGHConfig();if(!c.token||!c.owner||!c.repo){setSyncStatus('Configure in ⚙','var(--amber)');return}setSyncStatus('Pulling...','var(--amber)');try{const r=await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/contents/data/trades.json`,{headers:{Authorization:`token ${c.token}`}});if(r.ok){const d=await r.json();fileSha=d.sha;const rm=JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))));if(Array.isArray(rm))trades=rm;else{trades=rm.trades||[];if(rm.cashflows)saveCashflows(rm.cashflows);if(rm.equity!=null)localStorage.setItem('velox_equity_legacy',rm.equity);if(rm.equityHistory)localStorage.setItem('velox_equity_history',JSON.stringify(rm.equityHistory));if(rm.watchlist){watchlist=rm.watchlist;INSTRUMENTS.forEach(i=>{if(!watchlist[i])watchlist[i]={status:'NOT IN PLAY',note:''}})}}localStorage.setItem('velox_trades',JSON.stringify(trades));localStorage.setItem('velox_watchlist',JSON.stringify(watchlist));setSyncStatus('✓ '+trades.length+' trades','var(--green)');render()}else if(r.status===404){fileSha=null;setSyncStatus('No remote data','var(--text2)')}else setSyncStatus('✗ Failed','var(--red)')}catch(e){setSyncStatus('✗ Error','var(--red)')}}
+
+document.getElementById('tabs').addEventListener('click',e=>{if(e.target.classList.contains('tab')){currentTab=e.target.dataset.tab;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));e.target.classList.add('active');render()}});
+function render(){const c=document.getElementById('content');switch(currentTab){case'dashboard':c.innerHTML=renderDashboard();break;case'screener':c.innerHTML=renderScreener();break;case'new':c.innerHTML=renderNewTrade();bindForm();break;case'open':c.innerHTML=renderOpen();break;case'journal':c.innerHTML=renderJournal();break;case'stats':c.innerHTML=renderStats();break;case'settings':c.innerHTML=renderSettings();break}}
+
+function renderDashboard(){const open=openTrades(),closed=closedTrades(),wins=closed.filter(t=>t.status==='win'),winRate=closed.length>0?wins.length/closed.length*100:0,totalPnL=closed.reduce((s,t)=>s+(t.pnl||0),0),openRisk=open.reduce((s,t)=>s+calcLiveRisk(t),0),equity=getEquity(),riskPct=equity>0?openRisk/equity*100:0,dep=getTotalDeposited(),twr=getTimeWeightedReturn();
+return`<div class="dashboard-grid"><div>
+<div class="stats-row"><div class="stat-card"><div class="label">Open</div><div class="value">${open.length}</div></div><div class="stat-card"><div class="label">Closed</div><div class="value">${closed.length}</div></div><div class="stat-card"><div class="label">Win Rate</div><div class="value ${winRate>=50?'green':winRate>0?'red':''}">${fmt(winRate,1)}%</div></div><div class="stat-card"><div class="label">P&L</div><div class="value ${totalPnL>=0?'green':'red'}">${fmtGBP(totalPnL)}</div></div><div class="stat-card"><div class="label">Return (TWR)</div><div class="value ${twr>=0?'green':'red'}">${dep>0?(twr>=0?'+':'')+fmt(twr,1)+'%':'—'}</div></div><div class="stat-card"><div class="label">Risk/Eq</div><div class="value ${riskPct>10?'red':riskPct>5?'amber':'green'}">${equity>0?fmt(riskPct,1)+'%':'—'}</div></div></div>
+<div class="section-header"><h3>Pipeline</h3><div style="display:flex;gap:6px"><button class="btn-sm btn-secondary" onclick="document.getElementById('wlImport').click()">⬆ Import</button><input type="file" id="wlImport" accept=".json" style="display:none" onchange="importWatchlistFile(event)"><button class="btn-sm btn-secondary" onclick="clearWatchlist()">Clear</button></div></div>
+<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+<div class="inst-search" style="width:160px"><input type="text" id="pl_inst" autocomplete="off" placeholder="Search instrument..." onfocus="openPlDD()" oninput="filterPlDD(this.value)" onblur="setTimeout(()=>document.getElementById('plDD')?.classList.remove('open'),150)"><div class="inst-dropdown" id="plDD"></div></div>
+<select id="pl_status" style="font-size:11px;padding:5px;width:110px">${STATUSES.filter(s=>s!=='NOT IN PLAY').map(s=>`<option>${s}</option>`).join('')}</select>
+<input type="text" id="pl_note" placeholder="Thesis / trigger..." style="flex:1;min-width:150px;font-size:11px;padding:5px 8px">
+<button class="btn-sm btn-primary" onclick="addToPipeline()">+ Add</button>
+</div>
+${(()=>{const active=Object.entries(watchlist).filter(([k,v])=>v.status!=='NOT IN PLAY');if(active.length===0)return'<div class="empty"><p>Add instruments to your pipeline above, or import from Claude Code.</p></div>';return`<div class="wl-grid"><div class="wl-row wl-header"><div>Instrument</div><div>Status</div><div>Thesis / Trigger</div><div></div></div>
+${active.map(([i,w])=>{const sc=STATUS_CSS[w.status];const cnt=open.filter(t=>t.instrument===i).length;return`<div class="wl-row"><div class="wl-inst">${i} <span style="font-size:9px;color:var(--text2)">${ALL_INSTRUMENTS_MAP[i]||''}</span></div><div class="wl-status"><span class="status-dot status-${sc}"></span>${w.status==='TAKING PROFIT'?'TP':w.status}</div><div class="wl-note" title="${(w.note||'').replace(/"/g,'&quot;')}">${w.note||'—'}</div><div style="display:flex;gap:4px">${cnt>0?`<span style="color:var(--green);font-weight:600;margin-right:4px">${cnt}</span>`:''}<button class="btn-sm btn-secondary" onclick="removeFromPipeline('${i}')" style="font-size:9px;padding:2px 6px">✕</button></div></div>`}).join('')}</div>`;})()}
+<div class="section-header" style="margin-top:16px"><h3>Open Positions</h3></div>
+${open.length===0?'<div class="empty"><p>No open positions</p></div>':`<div class="table-wrap"><table><thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Target</th><th>£/pt</th><th>£ Risk</th><th>R:R</th><th>Score</th><th>BE</th><th></th></tr></thead><tbody>${open.map(t=>`<tr><td>${t.date||'—'}</td><td style="font-weight:600;color:#fff">${t.instrument}</td><td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td><td>${fmt(t.entry,t.decimals||2)}</td><td>${fmt(t.stop,t.decimals||2)}</td><td>${fmt(t.target,t.decimals||2)}</td><td>£${fmt(t.stake)}</td><td style="color:${t.breakeven?'var(--green)':'var(--amber)'}">£${fmt(calcRisk(t))}${t.breakeven?' ✓':''}</td><td>${fmt(calcRR(t),1)}:1</td><td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td><td><button class="btn-sm ${t.breakeven?'btn-primary':'btn-secondary'}" onclick="toggleBE('${t.id}')" style="${t.breakeven?'background:var(--green);font-size:9px':'font-size:9px'}">${t.breakeven?'BE ✓':'BE'}</button></td><td><button class="btn-sm btn-secondary" onclick="editTrade('${t.id}')">Edit</button></td></tr>`).join('')}</tbody></table></div>`}
+</div>${renderSidebar()}</div>`}
+
+function renderSidebar(){const equity=getEquity(),open=openTrades(),totalRisk=open.reduce((s,t)=>s+calcLiveRisk(t),0),riskPct=equity>0?totalRisk/equity*100:0;
+const byInst={};open.forEach(t=>{const r=calcLiveRisk(t);if(!byInst[t.instrument])byInst[t.instrument]={risk:0,count:0,direction:t.direction};byInst[t.instrument].risk+=r;byInst[t.instrument].count++});
+const warnings=[];const live=Object.keys(byInst);const corrLimit=getRiskLimit('corrGroup');const instLimit=getRiskLimit('instrument');
+for(let i=0;i<live.length;i++){
+  if(byInst[live[i]].risk>instLimit)warnings.push(`${INST_SHORT[live[i]]||live[i]}: £${fmt(byInst[live[i]].risk)} exceeds £${fmt(instLimit)} instrument cap`);
+  for(let j=i+1;j<live.length;j++){const a=live[i],b=live[j],c=CORR[a]?.[b];if(c===3){const combined=byInst[a].risk+byInst[b].risk;if(combined>0&&combined>corrLimit)warnings.push(`${INST_SHORT[a]||a}+${INST_SHORT[b]||b}: £${fmt(combined)} exceeds £${fmt(corrLimit)} corr group cap`);else if(combined>0)warnings.push(`${INST_SHORT[a]||a}+${INST_SHORT[b]||b}: HIGH corr`)}}
+}
+const hist=getEquityHistory();
+return`<div class="sidebar">
+<div class="sidebar-card"><h4>Account</h4>
+<div style="display:flex;gap:6px;margin-bottom:8px"><input type="number" id="cfAmt" placeholder="Amount" step="any" style="width:90px;font-size:11px"><select id="cfType" style="font-size:11px;padding:5px"><option value="deposit">Deposit</option><option value="withdrawal">Withdrawal</option></select><button class="btn-sm btn-primary" onclick="addCF()">Add</button></div>
+${(()=>{const dep=getTotalDeposited();const pnl=closedTrades().reduce((s,t)=>s+(t.pnl||0),0);const eq=dep+pnl;const simpleRet=getSimpleReturn();const twr=getTimeWeightedReturn();const cf=getCashflows();
+return`<div style="font-size:18px;font-weight:700;color:#fff">£${fmt(eq)}</div>
+<div style="margin-top:6px;font-size:11px;color:var(--text2)">Deposited: £${fmt(dep)}</div>
+<div style="font-size:11px;color:var(--text2)">Realised P&L: <span style="color:${pnl>=0?'var(--green)':'var(--red)'};font-weight:600">${fmtGBP(pnl)}</span></div>
+<div style="margin-top:6px;display:flex;gap:12px">
+<div><div style="font-size:9px;color:var(--text2);letter-spacing:0.5px">SIMPLE</div><div style="font-size:13px;font-weight:700;color:${simpleRet>=0?'var(--green)':'var(--red)'}">${dep>0?(simpleRet>=0?'+':'')+fmt(simpleRet,2)+'%':'—'}</div></div>
+<div><div style="font-size:9px;color:var(--text2);letter-spacing:0.5px">TWR</div><div style="font-size:13px;font-weight:700;color:${twr>=0?'var(--green)':'var(--red)'}">${dep>0?(twr>=0?'+':'')+fmt(twr,2)+'%':'—'}</div></div>
+</div>
+<div style="margin-top:8px;font-size:11px;color:var(--text2)">Risk: <span style="color:var(--amber);font-weight:600">£${fmt(totalRisk)}</span>${eq>0?` <span class="risk-pct">(${fmt(totalRisk/eq*100,1)}%)</span>`:''}</div>
+${eq>0?`<div style="margin-top:4px;height:4px;background:var(--bg);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.min(totalRisk/eq*100,100)}%;background:${totalRisk/eq*100>10?'var(--red)':totalRisk/eq*100>5?'var(--amber)':'var(--green)'};border-radius:2px"></div></div>`:''}
+${cf.length>0?`<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px"><div style="font-size:9px;color:var(--text2);letter-spacing:1px;margin-bottom:4px">HISTORY</div>${cf.slice(-5).reverse().map(c=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:var(--text2)"><span>${c.date.slice(5)} ${c.type==='deposit'?'↑':'↓'}</span><span style="color:${c.type==='deposit'?'var(--green)':'var(--red)'}">£${fmt(c.amount)}</span><span style="cursor:pointer;color:var(--text2)" onclick="removeCF('${c.id}')">✕</span></div>`).join('')}</div>`:''}`})()}</div>
+<div class="sidebar-card"><h4>Risk by Instrument</h4>${Object.keys(byInst).length===0?'<div style="font-size:11px;color:var(--text2)">No positions</div>':Object.entries(byInst).sort((a,b)=>b[1].risk-a[1].risk).map(([i,d])=>`<div class="risk-row"><div><span style="color:#fff;font-weight:500">${INST_SHORT[i]||i}</span><span style="font-size:9px;color:${d.direction==='long'?'var(--green)':'var(--red)'};margin-left:4px">${d.direction.toUpperCase()}</span>${d.count>1?`<span style="font-size:9px;color:var(--text2)"> ×${d.count}</span>`:''}</div><div><span style="color:var(--amber);font-weight:600">£${fmt(d.risk)}</span>${equity>0?`<span class="risk-pct">${fmt(d.risk/equity*100,1)}%</span>`:''}</div></div>`).join('')}${Object.keys(byInst).length>0?`<div class="risk-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-weight:600"><span style="color:#fff">TOTAL</span><div><span style="color:var(--amber)">£${fmt(totalRisk)}</span>${equity>0?`<span class="risk-pct">${fmt(riskPct,1)}%</span>`:''}</div></div>`:''}</div>
+${warnings.length>0?`<div class="sidebar-card" style="border-color:var(--red)"><h4 style="color:var(--red)">⚠ Correlation</h4>${warnings.map(w=>`<div style="font-size:10px;color:var(--red);margin-bottom:4px">${w}</div>`).join('')}</div>`:''}
+${(()=>{const closed=closedTrades();if(closed.length<2)return`<div class="sidebar-card"><h4>P&L Curve</h4><div style="font-size:11px;color:var(--text2)">Close 2+ trades to see curve</div></div>`;let cum=0;const pts=closed.map(t=>{cum+=(t.pnl||0);return{cum,date:t.date}});return`<div class="sidebar-card"><h4>P&L Curve</h4>${renderMiniPnLCurve(pts)}</div>`;})()}
+</div>`}
+function addCF(){const amt=parseFloat(document.getElementById('cfAmt')?.value);const type=document.getElementById('cfType')?.value;if(!amt||amt<=0){alert('Enter a valid amount');return}addCashflow(type,amt);save();render()}
+function removeCF(id){if(confirm('Remove this entry?')){removeCashflow(id);save();render()}}
+function renderMiniPnLCurve(pts){const v=pts.map(p=>p.cum),mn=Math.min(...v,0),mx=Math.max(...v,0),rng=mx-mn||1,w=240,ht=80,st=w/(v.length-1);
+const zeroY=ht-((0-mn)/rng*(ht-10))-5;
+let p='';v.forEach((val,i)=>{const x=i*st,y=ht-((val-mn)/rng*(ht-10))-5;p+=(i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1)});
+const l=v[v.length-1],c=l>=0?'var(--green)':'var(--red)';
+return`<svg viewBox="0 0 ${w} ${ht}" style="width:100%;height:${ht}px"><line x1="0" y1="${zeroY}" x2="${w}" y2="${zeroY}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/><path d="${p}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${(v.length-1)*st}" cy="${ht-((l-mn)/rng*(ht-10))-5}" r="3" fill="${c}"/></svg><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-top:4px"><span>${pts[0].date||''}</span><span style="color:${c};font-weight:600">${fmtGBP(l)}</span><span>${pts[pts.length-1].date||''}</span></div>`}
+
+// Watchlist is managed via Claude Code with TradingView MCP — import JSON here
+function importWatchlist(json){
+  try{
+    const data=typeof json==='string'?JSON.parse(json):json;
+    if(Array.isArray(data)){data.forEach(item=>{const ticker=item.ticker||item.symbol||item.instrument;if(ticker)watchlist[ticker]={status:item.status||'WATCHING',note:item.note||item.thesis||item.trigger||''}});}
+    else if(typeof data==='object'){Object.entries(data).forEach(([k,v])=>{watchlist[k]=typeof v==='string'?{status:'WATCHING',note:v}:{status:v.status||'WATCHING',note:v.note||v.thesis||''};});}
+    save();render();
+  }catch(e){alert('Invalid watchlist JSON: '+e.message)}
+}
+function importWatchlistFile(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=e=>importWatchlist(e.target.result);r.readAsText(f);ev.target.value='';
+}
+function clearWatchlist(){if(confirm('Clear all watchlist entries?')){Object.keys(watchlist).forEach(k=>watchlist[k]={status:'NOT IN PLAY',note:''});save();render()}}
+
+function addToPipeline(){
+  const inst=document.getElementById('pl_inst').value.trim();
+  if(!inst){alert('Select an instrument');return}
+  const status=document.getElementById('pl_status').value;
+  const note=document.getElementById('pl_note').value.trim();
+  watchlist[inst]={status,note};
+  save();render();
+}
+function removeFromPipeline(inst){watchlist[inst]={status:'NOT IN PLAY',note:''};save();render()}
+function openPlDD(){filterPlDD(document.getElementById('pl_inst').value)}
+function filterPlDD(q){
+  const dd=document.getElementById('plDD');if(!dd)return;
+  const ql=q.toLowerCase();
+  const matches=ALL_INSTRUMENTS.filter(i=>i.toLowerCase().includes(ql)||(ALL_INSTRUMENTS_MAP[i]||'').toLowerCase().includes(ql));
+  dd.innerHTML=matches.slice(0,15).map(i=>`<div class="inst-option" onmousedown="document.getElementById('pl_inst').value='${i}';document.getElementById('plDD').classList.remove('open')">${i} <span class="inst-desc">${ALL_INSTRUMENTS_MAP[i]||''}</span></div>`).join('');
+  dd.classList.add('open');
+}
+
+function renderNewTrade(){const t=editingId?trades.find(x=>x.id===editingId):null;return`<div class="form-section"><h3>${t?'Edit Trade':'New Trade'}</h3><div class="form-grid">
+<div class="form-group"><label>Instrument</label><div class="inst-search"><input type="text" id="f_inst_search" autocomplete="off" placeholder="Search..." value="${t?t.instrument:''}" onfocus="openInstDD()" oninput="filterInstDD(this.value)"><input type="hidden" id="f_inst" value="${t?t.instrument:INSTRUMENTS[0]}"><div class="inst-dropdown" id="instDD"></div></div></div>
+<div class="form-group"><label>Class / Margin</label><div id="marginInfo" style="padding:7px 0;font-size:12px;color:var(--text2)">—</div></div>
+<div class="form-group"><label>Direction</label><select id="f_dir"><option value="long" ${t&&t.direction==='long'?'selected':''}>Long</option><option value="short" ${t&&t.direction==='short'?'selected':''}>Short</option></select></div>
+<div class="form-group"><label>Date</label><input type="date" id="f_date" value="${t?t.date:new Date().toISOString().slice(0,10)}"></div>
+<div class="form-group"><label>Timeframe</label><select id="f_tf">${TIMEFRAMES.map(tf=>`<option ${t&&t.timeframe===tf?'selected':''}>${tf}</option>`).join('')}</select></div>
+<div class="form-group"><label>Entry</label><input type="number" step="any" id="f_entry" value="${t?t.entry:''}" oninput="updateCalcs()"></div>
+<div class="form-group"><label>Stop Loss</label><input type="number" step="any" id="f_stop" value="${t?t.stop:''}" oninput="updateCalcs()"></div>
+<div class="form-group"><label>Target</label><input type="number" step="any" id="f_target" value="${t?t.target:''}" oninput="updateCalcs()"></div>
+<div class="form-group"><label>£ per Point</label><input type="number" step="any" id="f_stake" value="${t?t.stake:''}" oninput="updateCalcs()"></div></div>
+<div class="calc-row"><div class="calc-item"><div class="label">STOP DIST</div><div class="val" id="c_dist">—</div></div><div class="calc-item"><div class="label">£ AT RISK</div><div class="val" id="c_risk" style="color:var(--amber)">—</div></div><div class="calc-item"><div class="label">R:R</div><div class="val" id="c_rr">—</div></div><div class="calc-item"><div class="label">£ REWARD</div><div class="val" id="c_reward" style="color:var(--green)">—</div></div><div class="calc-item"><div class="label">MARGIN</div><div class="val" id="c_margin" style="color:var(--blue)">—</div></div></div>
+<div style="margin-top:20px"><label style="font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px">SETUP SCORE</label><div class="score-grid">${CRITERIA.map((c,i)=>`<div class="score-item"><label>${c}</label><select id="f_sc_${i}" onchange="updateScore()">${[0,1,2].map(v=>`<option value="${v}" ${t&&t.scores&&t.scores[i]===v?'selected':''}>${v}</option>`).join('')}</select></div>`).join('')}</div><div style="margin-top:10px;display:flex;gap:16px;align-items:center"><span style="font-size:11px;color:var(--text2)">TOTAL:</span><span id="scoreTotal" style="font-size:20px;font-weight:700;color:#fff">0/10</span><span id="sizeRule" class="tag" style="font-size:11px">—</span></div></div>
+<div class="form-grid" style="margin-top:16px"><div class="form-group form-full"><label>Thesis / Notes</label><textarea id="f_notes" rows="3">${t?t.notes||'':''}</textarea></div><div class="form-group"><label>Screenshot URL</label><input type="url" id="f_ss" value="${t?t.screenshot||'':''}" placeholder="https://..."></div>
+${t?`<div class="form-group"><label>Status</label><select id="f_status"><option value="open" ${t.status==='open'?'selected':''}>Open</option><option value="win" ${t.status==='win'?'selected':''}>Win</option><option value="loss" ${t.status==='loss'?'selected':''}>Loss</option><option value="breakeven" ${t.status==='breakeven'?'selected':''}>BE</option></select></div><div class="form-group"><label>Close Price</label><input type="number" step="any" id="f_close" value="${t.closePrice||''}"></div><div class="form-group"><label>P&L (£)</label><input type="number" step="any" id="f_pnl" value="${t.pnl||''}"></div>`:''}</div>
+<div class="form-actions"><button class="btn-primary" onclick="saveTrade()">${t?'Update':'Log Trade'}</button>${t?`<button class="btn-danger" onclick="deleteTrade('${t.id}')">Delete</button>`:''}<button class="btn-secondary" onclick="editingId=null;currentTab='dashboard';render()">Cancel</button></div></div>`}
+function bindForm(){updateCalcs();updateScore();updateMargin();setupInstDD()}
+function setupInstDD(){filterInstDD('');const v=document.getElementById('f_inst').value;if(v)document.getElementById('f_inst_search').value=v}
+function openInstDD(){filterInstDD(document.getElementById('f_inst_search').value);document.getElementById('instDD').classList.add('open')}
+function closeInstDD(){setTimeout(()=>document.getElementById('instDD')?.classList.remove('open'),150)}
+function filterInstDD(q){
+  const dd=document.getElementById('instDD');if(!dd)return;
+  const ql=q.toLowerCase();
+  const matches=ALL_INSTRUMENTS.filter(i=>i.toLowerCase().includes(ql)||(ALL_INSTRUMENTS_MAP[i]||'').toLowerCase().includes(ql));
+  dd.innerHTML=matches.map(i=>`<div class="inst-option" onmousedown="selectInst('${i}')">${i} <span class="inst-desc">${ALL_INSTRUMENTS_MAP[i]||''}</span></div>`).join('');
+  dd.classList.add('open');
+}
+function selectInst(inst){
+  document.getElementById('f_inst').value=inst;
+  document.getElementById('f_inst_search').value=inst;
+  document.getElementById('instDD').classList.remove('open');
+  updateMargin();updateCalcs();
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.inst-search')){const dd=document.getElementById('instDD');if(dd)dd.classList.remove('open')}});
+function updateMargin(){const i=document.getElementById('f_inst')?.value,m=getMargin(i),e=document.getElementById('marginInfo');if(e)e.innerHTML=`<span style="color:#fff;font-weight:600">${m.class}</span> · ${m.margin}% · ${m.leverage}`}
+function updateCalcs(){const en=parseFloat(document.getElementById('f_entry')?.value),st=parseFloat(document.getElementById('f_stop')?.value),tg=parseFloat(document.getElementById('f_target')?.value),sk=parseFloat(document.getElementById('f_stake')?.value),inst=document.getElementById('f_inst')?.value;const dist=(!isNaN(en)&&!isNaN(st))?Math.abs(en-st):null,risk=(dist&&!isNaN(sk))?dist*sk:null,rr=(dist&&!isNaN(tg)&&!isNaN(en)&&dist>0)?Math.abs(tg-en)/dist:null,reward=(rr&&risk)?rr*risk:null,m=getMargin(inst),margin=(!isNaN(en)&&!isNaN(sk))?en*sk*(m.margin/100):null;const el=id=>document.getElementById(id);if(el('c_dist'))el('c_dist').textContent=dist!=null?fmt(dist,2)+' pts':'—';if(el('c_risk'))el('c_risk').textContent=risk!=null?'£'+fmt(risk):'—';if(el('c_rr'))el('c_rr').textContent=rr!=null?fmt(rr,1)+':1':'—';if(el('c_reward'))el('c_reward').textContent=reward!=null?'£'+fmt(reward):'—';if(el('c_margin'))el('c_margin').textContent=margin!=null?'£'+fmt(margin):'—'}
+function updateScore(){let total=0;for(let i=0;i<5;i++){const e=document.getElementById(`f_sc_${i}`);if(e)total+=parseInt(e.value)}const e=document.getElementById('scoreTotal'),r=document.getElementById('sizeRule');if(e){e.textContent=total+'/10';e.style.color=total>=8?'var(--green)':total>=6?'var(--amber)':'var(--red)'}if(r){const s=sizeRule(total);r.textContent=s;r.style.background=s==='FULL'?'rgba(46,204,113,.15)':s==='HALF'?'rgba(243,156,18,.15)':'rgba(231,76,60,.15)';r.style.color=s==='FULL'?'var(--green)':s==='HALF'?'var(--amber)':'var(--red)'}}
+function saveTrade(){const scores=[];for(let i=0;i<5;i++)scores.push(parseInt(document.getElementById(`f_sc_${i}`).value));const inst=document.getElementById('f_inst').value,mi=getMargin(inst);const data={id:editingId||genId(),instrument:inst,assetClass:mi.class,marginPct:mi.margin,leverage:mi.leverage,direction:document.getElementById('f_dir').value,date:document.getElementById('f_date').value,timeframe:document.getElementById('f_tf').value,entry:parseFloat(document.getElementById('f_entry').value)||null,stop:parseFloat(document.getElementById('f_stop').value)||null,target:parseFloat(document.getElementById('f_target').value)||null,stake:parseFloat(document.getElementById('f_stake').value)||null,scores,notes:document.getElementById('f_notes').value,screenshot:document.getElementById('f_ss').value,status:document.getElementById('f_status')?.value||'open',closePrice:parseFloat(document.getElementById('f_close')?.value)||null,pnl:parseFloat(document.getElementById('f_pnl')?.value)||null,decimals:['Silver','Copper'].includes(inst)?4:3};if(data.status!=='open'&&data.pnl!=null){const r=calcRisk(data);data.actualRR=r>0?data.pnl/r:0}if(editingId){const idx=trades.findIndex(t=>t.id===editingId);if(idx>=0)trades[idx]=data}else trades.push(data);save();editingId=null;currentTab='dashboard';render()}
+function editTrade(id){editingId=id;currentTab='new';document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelector('[data-tab="new"]').classList.add('active');render()}
+function toggleBE(id){const t=trades.find(x=>x.id===id);if(t){t.breakeven=!t.breakeven;save();render()}}
+function deleteTrade(id){if(confirm('Delete?')){trades=trades.filter(t=>t.id!==id);save();editingId=null;currentTab='dashboard';render()}}
+
+function renderOpen(){const open=openTrades();if(open.length===0)return'<div class="empty"><p>No open positions</p></div>';return`<div class="section-header"><h3>Open Positions</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Target</th><th>£/pt</th><th>£ Risk</th><th>R:R</th><th>Score</th><th>TF</th><th>Notes</th><th></th></tr></thead><tbody>${open.map(t=>`<tr><td>${t.date||'—'}</td><td style="font-weight:600;color:#fff">${t.instrument}</td><td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td><td>${fmt(t.entry,t.decimals||2)}</td><td>${fmt(t.stop,t.decimals||2)}</td><td>${fmt(t.target,t.decimals||2)}</td><td>£${fmt(t.stake)}</td><td style="color:var(--amber)">£${fmt(calcRisk(t))}</td><td>${fmt(calcRR(t),1)}:1</td><td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td><td>${t.timeframe||'—'}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;color:var(--text2)">${t.notes||'—'}</td><td><button class="btn-sm btn-secondary" onclick="editTrade('${t.id}')">Edit</button></td></tr>`).join('')}</tbody></table></div>`}
+
+function renderJournal(){const closed=closedTrades().reverse();if(closed.length===0)return'<div class="empty"><p>No closed trades</p></div>';return`<div class="section-header"><h3>Trade Journal</h3></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Instrument</th><th>Dir</th><th>Entry</th><th>Close</th><th>Result</th><th>P&L</th><th>R</th><th>Score</th><th>Notes</th><th></th></tr></thead><tbody>${closed.map(t=>`<tr><td>${t.date||'—'}</td><td style="font-weight:600;color:#fff">${t.instrument}</td><td><span class="tag tag-${t.direction}">${t.direction.toUpperCase()}</span></td><td>${fmt(t.entry,t.decimals||2)}</td><td>${fmt(t.closePrice,t.decimals||2)}</td><td><span class="tag tag-${t.status}">${t.status.toUpperCase()}</span></td><td style="color:${(t.pnl||0)>=0?'var(--green)':'var(--red)'}">${fmtGBP(t.pnl||0)}</td><td>${fmt(t.actualRR||0,2)}R</td><td><span class="score ${totalScore(t)>=8?'score-high':totalScore(t)>=6?'score-med':'score-low'}">${totalScore(t)}/10</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;color:var(--text2)">${t.notes||'—'}</td><td><button class="btn-sm btn-secondary" onclick="editTrade('${t.id}')">Edit</button></td></tr>`).join('')}</tbody></table></div>`}
+
+function renderStats(){const closed=closedTrades();if(closed.length<2)return'<div class="empty"><p>Need 2+ closed trades</p></div>';const wins=closed.filter(t=>t.status==='win'),losses=closed.filter(t=>t.status==='loss'),winRate=wins.length/closed.length*100,totalPnL=closed.reduce((s,t)=>s+(t.pnl||0),0),avgWin=wins.length>0?wins.reduce((s,t)=>s+(t.pnl||0),0)/wins.length:0,avgLoss=losses.length>0?losses.reduce((s,t)=>s+(t.pnl||0),0)/losses.length:0,expectancy=totalPnL/closed.length,avgR=closed.reduce((s,t)=>s+(t.actualRR||0),0)/closed.length;const byInst={};closed.forEach(t=>{if(!byInst[t.instrument])byInst[t.instrument]={pnl:0,count:0,wins:0};byInst[t.instrument].pnl+=(t.pnl||0);byInst[t.instrument].count++;if(t.status==='win')byInst[t.instrument].wins++});const maxP=Math.max(...Object.values(byInst).map(v=>Math.abs(v.pnl)),1);const hist=getEquityHistory();
+return`<div class="stats-row"><div class="stat-card"><div class="label">Win Rate</div><div class="value ${winRate>=50?'green':'red'}">${fmt(winRate,1)}%</div></div><div class="stat-card"><div class="label">P&L</div><div class="value ${totalPnL>=0?'green':'red'}">${fmtGBP(totalPnL)}</div></div><div class="stat-card"><div class="label">Expectancy</div><div class="value ${expectancy>=0?'green':'red'}">${fmtGBP(expectancy)}</div></div><div class="stat-card"><div class="label">Avg Win</div><div class="value green">${fmtGBP(avgWin)}</div></div><div class="stat-card"><div class="label">Avg Loss</div><div class="value red">${fmtGBP(avgLoss)}</div></div><div class="stat-card"><div class="label">Avg R</div><div class="value">${fmt(avgR,2)}R</div></div></div>
+<div class="chart-grid"><div class="chart-card"><h4>P&L by Instrument</h4>${Object.entries(byInst).sort((a,b)=>b[1].pnl-a[1].pnl).map(([i,d])=>`<div class="bar-row"><div class="bar-label">${INST_SHORT[i]||i}</div><div class="bar-track"><div class="bar-fill ${d.pnl>=0?'green':'red'}" style="width:${Math.max(Math.abs(d.pnl)/maxP*100,8)}%">${fmtGBP(d.pnl)}</div></div></div>`).join('')}</div>
+<div class="chart-card"><h4>Win Rate by Instrument</h4>${Object.entries(byInst).sort((a,b)=>(b[1].wins/b[1].count)-(a[1].wins/a[1].count)).map(([i,d])=>{const wr=d.count>0?d.wins/d.count*100:0;return`<div class="bar-row"><div class="bar-label">${INST_SHORT[i]||i}</div><div class="bar-track"><div class="bar-fill ${wr>=50?'green':'red'}" style="width:${Math.max(wr,8)}%">${fmt(wr,0)}% (${d.count})</div></div></div>`}).join('')}</div></div>
+<div class="chart-card" style="margin-top:16px"><h4>Cumulative P&L</h4><div style="display:flex;align-items:flex-end;gap:2px;height:120px;padding-top:10px">${(()=>{let cum=0;const pts=closed.map(t=>{cum+=(t.pnl||0);return cum});const mx=Math.max(...pts.map(Math.abs),1);return pts.map(p=>`<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center"><div style="width:100%;max-width:20px;height:${Math.max(Math.abs(p)/mx*100,3)}%;background:${p>=0?'var(--green)':'var(--red)'};border-radius:2px 2px 0 0"></div></div>`).join('')})()}</div></div>
+${(()=>{if(closed.length<3)return'';let cum=0;const pts=closed.map(t=>{cum+=(t.pnl||0);return{cum,date:t.date}});const simpleRet=getSimpleReturn();const twr=getTimeWeightedReturn();return renderFullPnLCurve(pts,simpleRet,twr);})()}`}
+function renderFullPnLCurve(pts,simpleRet,twr){const v=pts.map(p=>p.cum),dates=pts.map(p=>p.date),mn=Math.min(...v,0),mx=Math.max(...v,0),rng=mx-mn||1;const cw=700,ch=180,pL=55,pR=10,pT=10,pB=25,pw=cw-pL-pR,ph=ch-pT-pB,stp=pw/(v.length-1);
+const zeroY=pT+ph-((0-mn)/rng*ph);
+let lp='',ap='';v.forEach((val,i)=>{const x=pL+i*stp,y=pT+ph-((val-mn)/rng*ph);lp+=(i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1);if(i===0)ap='M'+x.toFixed(1)+','+zeroY.toFixed(1);ap+='L'+x.toFixed(1)+','+y.toFixed(1)});ap+='L'+(pL+(v.length-1)*stp).toFixed(1)+','+zeroY.toFixed(1)+'Z';
+const l=v[v.length-1],c=l>=0?'var(--green)':'var(--red)';
+let yL='';for(let i=0;i<=4;i++){const val=mn+(rng*i/4),y=pT+ph-(i/4*ph);yL+=`<text x="${pL-4}" y="${y+4}" fill="var(--text2)" font-size="9" text-anchor="end">${val>=0?'+':''}£${Math.round(Math.abs(val)).toLocaleString()}</text><line x1="${pL}" y1="${y}" x2="${cw-pR}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`}
+yL+=`<line x1="${pL}" y1="${zeroY}" x2="${cw-pR}" y2="${zeroY}" stroke="var(--text2)" stroke-width="0.5" stroke-dasharray="4,3"/>`;
+let xL='';const li=Math.max(1,Math.floor(v.length/6));dates.forEach((d,i)=>{if(i%li===0||i===dates.length-1)xL+=`<text x="${pL+i*stp}" y="${ch-4}" fill="var(--text2)" font-size="8" text-anchor="middle">${(d||'').slice(5)}</text>`});
+return`<div class="chart-card" style="margin-top:16px"><h4>P&L Curve</h4><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:12px;color:var(--text2)">${pts.length} trades</span><span style="font-size:14px;font-weight:700;color:${c}">${fmtGBP(l)}</span><span style="font-size:11px;color:var(--text2)">Simple: <span style="color:${c}">${simpleRet>=0?'+':''}${simpleRet.toFixed(1)}%</span> · TWR: <span style="color:${c}">${twr>=0?'+':''}${twr.toFixed(1)}%</span></span></div><svg viewBox="0 0 ${cw} ${ch}" style="width:100%;height:${ch}px">${yL}${xL}<defs><linearGradient id="pnlG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${c}" stop-opacity="0.25"/><stop offset="100%" stop-color="${c}" stop-opacity="0.02"/></linearGradient></defs><path d="${ap}" fill="url(#pnlG)"/><path d="${lp}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${pL+(v.length-1)*stp}" cy="${pT+ph-((l-mn)/rng*ph)}" r="4" fill="${c}"/></svg></div>`}
+
+// ── ETF SCREENER ──
+const ETF_UNIVERSE={
+// US Broad (9)
+SPY:'S&P 500',QQQ:'Nasdaq 100',IWM:'Small Cap',MDY:'Mid Cap',DIA:'Dow 30',IWF:'Growth',IWD:'Value',RSP:'S&P Equal Wt',VTI:'Total US Mkt',
+// US Sectors (14)
+XLK:'Tech',XLF:'Financials',XLE:'Energy',XLV:'Healthcare',XLI:'Industrials',
+XLY:'Consumer Disc',XLP:'Consumer Staples',XLB:'Materials',XLU:'Utilities',XLRE:'Real Estate',
+XOP:'Oil & Gas Expl',XHB:'Homebuilders',KBE:'Regional Banks',XME:'Metals & Mining',
+// Commodities (15)
+GLD:'Gold',SLV:'Silver',CPER:'Copper',USO:'Crude Oil',UNG:'Nat Gas',
+PDBC:'Broad Commod',URNM:'Uranium',DBA:'Agriculture',GDX:'Gold Miners',GDXJ:'Jr Gold Miners',
+WEAT:'Wheat',CORN:'Corn',PALL:'Palladium',PPLT:'Platinum',DBB:'Base Metals',
+// International (18)
+EEM:'Emerging Mkts',EFA:'Intl Developed',EWJ:'Japan',FXI:'China Large',VGK:'Europe',
+INDA:'India',EWZ:'Brazil',KWEB:'China Tech',EWT:'Taiwan',EWY:'South Korea',
+EWG:'Germany',EWA:'Australia',EWC:'Canada',TUR:'Turkey',EIDO:'Indonesia',
+EWS:'Singapore',EWH:'Hong Kong',MCHI:'China Broad',
+// Fixed Income (9)
+TLT:'Long Bonds',HYG:'High Yield',LQD:'Inv Grade',SHY:'Short Treasury',
+IEF:'7-10yr Treasury',TIP:'TIPS Inflation',EMB:'EM Bonds',JNK:'Junk Bonds',AGG:'US Agg Bond',
+// Factors (5)
+QUAL:'Quality',MTUM:'Momentum',DGRO:'Div Growth',VLUE:'Value Factor',SIZE:'Size Factor',
+// Thematic (24)
+BOTZ:'Robotics/AI',ICLN:'Clean Energy',CIBR:'Cybersecurity',ARKK:'Disruptive',MOO:'Agribusiness',
+XBI:'Biotech',ITA:'Defence',IBB:'Biotech LgCap',SMH:'Semiconductors',SOXX:'Semis Alt',
+IGV:'Software',SKYY:'Cloud Computing',LIT:'Lithium/Battery',REMX:'Rare Earths',
+PPA:'Aero & Defence',JETS:'Airlines',HACK:'Cyber Alt',PBW:'Clean Energy Alt',
+COPX:'Copper Miners',SIL:'Silver Miners',URA:'Uranium Alt',BATT:'Battery Tech',
+DRIV:'Self-Driving',FINX:'Fintech',GNOM:'Genomics',BLOK:'Blockchain'};
+const ETF_EXCHANGE={
+// US Broad
+SPY:'AMEX',QQQ:'NASDAQ',IWM:'AMEX',MDY:'AMEX',DIA:'AMEX',IWF:'AMEX',IWD:'AMEX',RSP:'AMEX',VTI:'AMEX',
+// US Sectors
+XLK:'AMEX',XLF:'AMEX',XLE:'AMEX',XLV:'AMEX',XLI:'AMEX',
+XLY:'AMEX',XLP:'AMEX',XLB:'AMEX',XLU:'AMEX',XLRE:'AMEX',
+XOP:'AMEX',XHB:'AMEX',KBE:'AMEX',XME:'AMEX',
+// Commodities
+GLD:'AMEX',SLV:'AMEX',CPER:'AMEX',USO:'AMEX',UNG:'AMEX',
+PDBC:'NASDAQ',URNM:'AMEX',DBA:'AMEX',GDX:'AMEX',GDXJ:'AMEX',
+WEAT:'AMEX',CORN:'AMEX',PALL:'AMEX',PPLT:'AMEX',DBB:'AMEX',
+// International
+EEM:'AMEX',EFA:'AMEX',EWJ:'AMEX',FXI:'AMEX',VGK:'AMEX',
+INDA:'AMEX',EWZ:'AMEX',KWEB:'AMEX',EWT:'AMEX',EWY:'AMEX',
+EWG:'AMEX',EWA:'AMEX',EWC:'AMEX',TUR:'AMEX',EIDO:'AMEX',
+EWS:'AMEX',EWH:'AMEX',MCHI:'NASDAQ',
+// Fixed Income
+TLT:'NASDAQ',HYG:'AMEX',LQD:'AMEX',SHY:'NASDAQ',
+IEF:'NASDAQ',TIP:'AMEX',EMB:'AMEX',JNK:'AMEX',AGG:'AMEX',
+// Factors
+QUAL:'AMEX',MTUM:'AMEX',DGRO:'AMEX',VLUE:'AMEX',SIZE:'AMEX',
+// Thematic
+BOTZ:'NASDAQ',ICLN:'NASDAQ',CIBR:'AMEX',ARKK:'AMEX',MOO:'AMEX',
+XBI:'AMEX',ITA:'AMEX',IBB:'NASDAQ',SMH:'NASDAQ',SOXX:'NASDAQ',
+IGV:'AMEX',SKYY:'AMEX',LIT:'AMEX',REMX:'AMEX',
+PPA:'AMEX',JETS:'AMEX',HACK:'AMEX',PBW:'AMEX',
+COPX:'AMEX',SIL:'AMEX',URA:'AMEX',BATT:'AMEX',
+DRIV:'AMEX',FINX:'AMEX',GNOM:'AMEX',BLOK:'AMEX'};
+const ETF_TICKERS=Object.keys(ETF_UNIVERSE);
+const FMP_KEY='fsUwZ3RqDc7Wa2pjUyMhlLnOet1HVwUl';
+let screenerData=[];let screenerRunning=false;let screenerErrors=[];let screenerFilter={minRS:70,rsiMin:0,rsiMax:100,trendOnly:true,setupFilter:'all',volConfirm:false};let screenerSubTab='setups';
+
+function ema(data,period){const k=2/(period+1);let e=data[0];const out=[e];for(let i=1;i<data.length;i++){e=data[i]*k+e*(1-k);out.push(e)}return out}
+function rsi(closes,period=14){const gains=[],losses=[];for(let i=1;i<closes.length;i++){const d=closes[i]-closes[i-1];gains.push(d>0?d:0);losses.push(d<0?-d:0)}let avgG=gains.slice(0,period).reduce((a,b)=>a+b,0)/period;let avgL=losses.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=new Array(period).fill(null);out.push(avgL===0?100:100-100/(1+avgG/avgL));for(let i=period;i<gains.length;i++){avgG=(avgG*(period-1)+gains[i])/period;avgL=(avgL*(period-1)+losses[i])/period;out.push(avgL===0?100:100-100/(1+avgG/avgL))}return out}
+function atr(highs,lows,closes,period=14){const trs=[];for(let i=1;i<closes.length;i++){trs.push(Math.max(highs[i]-lows[i],Math.abs(highs[i]-closes[i-1]),Math.abs(lows[i]-closes[i-1])))}let avg=trs.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=new Array(period).fill(null);out.push(avg);for(let i=period;i<trs.length;i++){avg=(avg*(period-1)+trs[i])/period;out.push(avg)}return out}
+
+async function fetchETFData(ticker){
+  try{
+    const url=`https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=${ticker}&apikey=${FMP_KEY}`;
+    const r=await fetch(url);
+    if(!r.ok){screenerErrors.push(`${ticker}: HTTP ${r.status}`);return null}
+    const d=await r.json();
+    if(d['Error Message']){screenerErrors.push(`${ticker}: ${d['Error Message']}`);return null}
+    // Handle both formats: array directly or {historical:[...]}
+    let bars=Array.isArray(d)?d:d.historical;
+    if(!bars||bars.length<200){screenerErrors.push(`${ticker}: Only ${bars?bars.length:0} bars (need 200+)`);return null}
+    // Ensure chronological order (oldest first)
+    if(bars.length>1&&bars[0].date>bars[1].date)bars=bars.reverse();
+    return bars.slice(-260);
+  }catch(e){screenerErrors.push(`${ticker}: ${e.message}`);return null}
+}
+
+function analyzeETF(ticker,bars){
+  const closes=bars.map(b=>b.close),highs=bars.map(b=>b.high),lows=bars.map(b=>b.low),volumes=bars.map(b=>b.volume);
+  const n=closes.length,cl=closes[n-1];
+  const ema21=ema(closes,21),ema50=ema(closes,50),ema200=ema(closes,200);
+  const e21=ema21[n-1],e50=ema50[n-1],e200=ema200[n-1];
+  const rsiArr=rsi(closes,14);const rsiVal=rsiArr[rsiArr.length-1]||50;
+  const atrArr=atr(highs,lows,closes,14);const atrVal=atrArr[atrArr.length-1]||0;
+  // Highs/lows
+  const last20H=Math.max(...highs.slice(-20)),last20L=Math.min(...lows.slice(-20));
+  const last50H=Math.max(...highs.slice(-50)),last50L=Math.min(...lows.slice(-50));
+  const range20=last20H-last20L,range50=last50H-last50L;
+  // Volume
+  const vol20=volumes.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const vol50=volumes.slice(-50).reduce((a,b)=>a+b,0)/50;
+  const volRatio=vol20>0?volumes[n-1]/vol20:1;
+  // Multi-period returns for blended RS
+  const ret1m=n>=21?(cl/closes[n-21]-1)*100:0;
+  const ret3m=n>=63?(cl/closes[n-63]-1)*100:0;
+  const ret6m=n>=126?(cl/closes[n-126]-1)*100:0;
+  const ret12m=n>=252?(cl/closes[n-252]-1)*100:(n>=200?(cl/closes[0]-1)*100:0);
+  // Blended RS: 40% 12m + 25% 6m + 20% 3m + 15% 1m
+  const rsRaw=ret12m*0.40+ret6m*0.25+ret3m*0.20+ret1m*0.15;
+  // Trend filter
+  const trendValid=cl>e50&&e50>e200&&cl>e200;
+  // Trend score
+  let ts=0;
+  if(cl>e21)ts++;if(cl>e50)ts++;if(cl>e200)ts++;
+  if(e21>e50)ts++;if(e50>e200)ts++;
+  if(n>5&&ema21[n-1]>ema21[n-6])ts++;
+  if(n>5&&ema50[n-1]>ema50[n-6])ts++;
+  if(n>5&&ema200[n-1]>ema200[n-6])ts++;
+  if(cl>(last20H+last20L)/2)ts++;
+  if(rsiVal>50)ts++;
+  // Distance metrics
+  const pct21=(cl-e21)/e21*100,pct50=(cl-e50)/e50*100,pct200=(cl-e200)/e200*100;
+  const pct20H=(cl-last20H)/last20H*100,pct50H=(cl-last50H)/last50H*100;
+  const pct20L=(cl-last20L)/last20L*100,pct50L=(cl-last50L)/last50L*100;
+  // Setup classification
+  let setup='None';
+  if(trendValid){
+    const nearEma=Math.abs(pct21)<=3||Math.abs(pct50)<=4;
+    if(nearEma&&rsiVal>=40&&rsiVal<=65)setup='Pullback';
+    else if(range20<range50&&pct50H>=-5){
+      const volDecline=volumes.slice(-20).reduce((a,b)=>a+b,0)<volumes.slice(-50,-30).reduce((a,b)=>a+b,0);
+      if(volDecline||!screenerFilter.volConfirm)setup='VCP';
+    }
+  }
+  return{ticker,close:cl,trendValid,trendScore:ts,ret1m,ret3m,ret6m,ret12m,rsRaw,setup,rsi:rsiVal,atr:atrVal,
+    pct21,pct50,pct200,pct20H,pct50H,pct20L,pct50L,range20,range50,volRatio,
+    ema21:e21,ema50:e50,ema200:e200,rsScore:0,closes63:closes.slice(-63)};
+}
+
+function calcRSScores(results){
+  if(results.length<2)return;
+  results.forEach(r=>{if(r.rsRaw==null)r.rsRaw=r.ret3m||0});
+  const sorted=[...results].sort((a,b)=>a.rsRaw-b.rsRaw);
+  sorted.forEach((r,i)=>{r.rsScore=Math.round(i/(sorted.length-1)*100)});
+  results.forEach(r=>{const m=sorted.find(s=>s.ticker===r.ticker);if(m)r.rsScore=m.rsScore});
+}
+
+async function runScreener(){
+  if(screenerRunning)return;screenerRunning=true;screenerErrors=[];
+  const prog=document.getElementById('scrProg');const btn=document.getElementById('scrBtn');
+  if(btn)btn.disabled=true;
+  screenerData=[];let done=0;
+  const updateProg=()=>{if(prog)prog.textContent=`${done}/${ETF_TICKERS.length} fetched, ${screenerData.length} OK, ${screenerErrors.length} errors`};
+  const batchSize=5;
+  for(let i=0;i<ETF_TICKERS.length;i+=batchSize){
+    const batch=ETF_TICKERS.slice(i,i+batchSize);
+    const results=await Promise.all(batch.map(async t=>{
+      try{const bars=await fetchETFData(t);if(bars)return analyzeETF(t,bars)}catch(e){screenerErrors.push(`${t}: ${e.message}`)}return null;
+    }));
+    results.forEach(r=>{if(r)screenerData.push(r)});
+    done+=batch.length;updateProg();
+    if(i+batchSize<ETF_TICKERS.length)await new Promise(r=>setTimeout(r,300));
+  }
+  calcRSScores(screenerData);
+  screenerRunning=false;if(btn)btn.disabled=false;
+  localStorage.setItem('velox_screener_data',JSON.stringify(screenerData));
+  localStorage.setItem('velox_screener_time',new Date().toISOString());
+  render();
+}
+
+function getFilteredScreener(){
+  let d=screenerData.slice();
+  if(screenerFilter.trendOnly)d=d.filter(r=>r.trendValid);
+  d=d.filter(r=>r.rsScore>=screenerFilter.minRS);
+  d=d.filter(r=>r.rsi>=screenerFilter.rsiMin&&r.rsi<=screenerFilter.rsiMax);
+  if(screenerFilter.setupFilter!=='all')d=d.filter(r=>r.setup===screenerFilter.setupFilter);
+  const order={Pullback:0,VCP:1,None:2};
+  d.sort((a,b)=>(order[a.setup]??2)-(order[b.setup]??2)||b.trendScore-a.trendScore||b.rsScore-a.rsScore);
+  return d;
+}
+
+function setupColor(s){return s==='Pullback'?'var(--green)':s==='VCP'?'var(--blue)':'var(--text2)'}
+function setupBg(s){return s==='Pullback'?'rgba(46,204,113,.08)':s==='VCP'?'rgba(52,152,219,.08)':'transparent'}
+
+function renderScreener(){
+  if(screenerData.length===0){const cached=localStorage.getItem('velox_screener_data');if(cached){screenerData=JSON.parse(cached);calcRSScores(screenerData)}}
+  const lastRun=localStorage.getItem('velox_screener_time');const data=getFilteredScreener();
+  const allValid=screenerData.filter(r=>r.trendValid);
+  const pullbacks=screenerData.filter(r=>r.setup==='Pullback');
+  const vcps=screenerData.filter(r=>r.setup==='VCP');
+
+  return`<div class="form-section">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+<h3 style="margin:0">ETF Screener</h3>
+<div style="display:flex;gap:8px;align-items:center">
+<span id="scrProg" style="font-size:10px;color:var(--text2)">${screenerRunning?'Running...':''}</span>
+<button class="btn-primary" id="scrBtn" onclick="runScreener()" ${screenerRunning?'disabled':''}>▶ Run Scan</button>
+<button class="btn-secondary" onclick="exportScreenerCSV()">⬇ CSV</button>
+</div></div>
+
+<div class="stats-row" style="margin-bottom:12px">
+<div class="stat-card"><div class="label">Scanned</div><div class="value">${screenerData.length}</div></div>
+<div class="stat-card"><div class="label">Trend Valid</div><div class="value green">${allValid.length}</div></div>
+<div class="stat-card"><div class="label">Pullbacks</div><div class="value" style="color:var(--green)">${pullbacks.length}</div></div>
+<div class="stat-card"><div class="label">VCPs</div><div class="value" style="color:var(--blue)">${vcps.length}</div></div>
+<div class="stat-card"><div class="label">Last Run</div><div class="value" style="font-size:11px">${lastRun?new Date(lastRun).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'Never'}</div></div>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:var(--bg3);border-radius:6px;align-items:center">
+<div style="font-size:10px;color:var(--text2)">FILTERS:</div>
+<div style="display:flex;align-items:center;gap:4px"><label style="font-size:10px;color:var(--text2)">Min RS</label><input type="number" id="scr_rs" value="${screenerFilter.minRS}" style="width:50px;font-size:11px;padding:4px" onchange="screenerFilter.minRS=parseInt(this.value)||0;render()"></div>
+<div style="display:flex;align-items:center;gap:4px"><label style="font-size:10px;color:var(--text2)">RSI</label><input type="number" id="scr_rsiMin" value="${screenerFilter.rsiMin}" style="width:40px;font-size:11px;padding:4px" onchange="screenerFilter.rsiMin=parseInt(this.value)||0;render()">–<input type="number" id="scr_rsiMax" value="${screenerFilter.rsiMax}" style="width:40px;font-size:11px;padding:4px" onchange="screenerFilter.rsiMax=parseInt(this.value)||100;render()"></div>
+<div style="display:flex;align-items:center;gap:4px"><label style="font-size:10px;color:var(--text2)">Setup</label><select style="font-size:11px;padding:4px" onchange="screenerFilter.setupFilter=this.value;render()"><option value="all" ${screenerFilter.setupFilter==='all'?'selected':''}>All</option><option value="Pullback" ${screenerFilter.setupFilter==='Pullback'?'selected':''}>Pullback</option><option value="VCP" ${screenerFilter.setupFilter==='VCP'?'selected':''}>VCP</option><option value="None" ${screenerFilter.setupFilter==='None'?'selected':''}>None</option></select></div>
+<div style="display:flex;align-items:center;gap:4px"><label style="font-size:10px;color:var(--text2)"><input type="checkbox" ${screenerFilter.trendOnly?'checked':''} onchange="screenerFilter.trendOnly=this.checked;render()"> Trend Only</label></div>
+<div style="display:flex;align-items:center;gap:4px"><label style="font-size:10px;color:var(--text2)"><input type="checkbox" ${screenerFilter.volConfirm?'checked':''} onchange="screenerFilter.volConfirm=this.checked;render()"> Vol Confirm</label></div>
+</div>
+
+<div style="display:flex;gap:4px;margin-bottom:12px">
+${[['setups','Setups ('+data.filter(r=>r.setup!=='None').length+')'],['pullback','Pullback'],['vcp','VCP'],['all','All Valid'],['corr','Correlation'],['full','Full List']].map(([k,l])=>`<button class="btn-sm ${screenerSubTab===k?'btn-primary':'btn-secondary'}" onclick="screenerSubTab='${k}';render()" style="font-size:10px">${l}</button>`).join('')}
+</div>
+
+${screenerData.length===0&&!screenerRunning?'<div class="empty"><p>Click Run Scan to fetch data for '+ETF_TICKERS.length+' ETFs</p></div>':renderScreenerTable(data)}
+${screenerErrors.length>0?`<div style="margin-top:12px;padding:12px;background:rgba(231,76,60,.1);border:1px solid var(--red);border-radius:6px"><div style="font-size:10px;color:var(--red);font-weight:700;letter-spacing:1px;margin-bottom:6px">ERRORS (${screenerErrors.length})</div>${screenerErrors.map(e=>`<div style="font-size:10px;color:var(--red);padding:2px 0">${e}</div>`).join('')}</div>`:''}
+</div>`;
+}
+
+function renderScreenerTable(data){
+  if(screenerSubTab==='corr')return renderETFCorrelation();
+  let rows=data;
+  if(screenerSubTab==='pullback')rows=data.filter(r=>r.setup==='Pullback');
+  else if(screenerSubTab==='vcp')rows=data.filter(r=>r.setup==='VCP');
+  else if(screenerSubTab==='setups')rows=data.filter(r=>r.setup!=='None');
+  else if(screenerSubTab==='all')rows=data.filter(r=>r.trendValid);
+  else rows=screenerData.slice().sort((a,b)=>b.trendScore-a.trendScore);
+
+  if(rows.length===0)return'<div class="empty"><p>No results matching filters</p></div>';
+  return`<div class="table-wrap"><table><thead><tr>
+<th>Ticker</th><th>Close</th><th>Trend</th><th>Score</th><th>RS</th><th>1M</th><th>3M</th><th>6M</th><th>12M</th><th>Setup</th><th>RSI</th><th>% 21E</th><th>% 50E</th><th>% 50dH</th><th>Vol/Avg</th>
+</tr></thead><tbody>${rows.map(r=>`<tr style="background:${setupBg(r.setup)}">
+<td style="font-weight:700;color:#fff">${r.ticker} <span style="font-weight:400;color:var(--text2);font-size:10px">${ETF_UNIVERSE[r.ticker]||''}</span></td>
+<td>$${r.close.toFixed(2)}</td>
+<td>${r.trendValid?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--red)">✗</span>'}</td>
+<td><span style="color:${r.trendScore>=8?'var(--green)':r.trendScore>=6?'var(--amber)':'var(--red)'};font-weight:700">${r.trendScore}</span>/10</td>
+<td><span style="color:${r.rsScore>=70?'var(--green)':r.rsScore>=40?'var(--amber)':'var(--red)'};font-weight:600">${r.rsScore}</span></td>
+<td style="color:${(r.ret1m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret1m||0)>=0?'+':''}${(r.ret1m||0).toFixed(1)}%</td>
+<td style="color:${(r.ret3m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret3m||0)>=0?'+':''}${(r.ret3m||0).toFixed(1)}%</td>
+<td style="color:${(r.ret6m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret6m||0)>=0?'+':''}${(r.ret6m||0).toFixed(1)}%</td>
+<td style="color:${(r.ret12m||0)>=0?'var(--green)':'var(--red)'};font-size:11px">${(r.ret12m||0)>=0?'+':''}${(r.ret12m||0).toFixed(1)}%</td>
+<td><span style="color:${setupColor(r.setup)};font-weight:700">${r.setup}</span></td>
+<td style="color:${r.rsi>70?'var(--red)':r.rsi<30?'var(--green)':'var(--text)'}">${r.rsi.toFixed(0)}</td>
+<td style="color:${Math.abs(r.pct21)<=3?'var(--green)':'var(--text2)'}">${r.pct21>=0?'+':''}${r.pct21.toFixed(1)}%</td>
+<td style="color:${Math.abs(r.pct50)<=4?'var(--green)':'var(--text2)'}">${r.pct50>=0?'+':''}${r.pct50.toFixed(1)}%</td>
+<td>${r.pct50H.toFixed(1)}%</td>
+<td>${r.range20.toFixed(2)}</td>
+<td>${r.range50.toFixed(2)}</td>
+<td style="color:${r.volRatio>1.2?'var(--green)':r.volRatio<0.8?'var(--red)':'var(--text2)'}">${r.volRatio.toFixed(2)}x</td>
+</tr>`).join('')}</tbody></table></div>`;
+}
+
+function exportScreenerCSV(){
+  const data=getFilteredScreener();if(data.length===0){alert('No data to export');return}
+  
+  // Build portfolio context header
+  const open=openTrades();const equity=getEquity();const totalRisk=open.reduce((s,t)=>s+calcLiveRisk(t),0);
+  const riskPct=equity>0?(totalRisk/equity*100):0;
+  const dep=getTotalDeposited();const twr=getTimeWeightedReturn();
+  
+  let ctx='# PORTFOLIO CONTEXT\n';
+  ctx+=`# Equity: £${fmt(equity)} | Deposited: £${fmt(dep)} | TWR: ${twr>=0?'+':''}${twr.toFixed(2)}%\n`;
+  ctx+=`# Live Risk: £${fmt(totalRisk)} (${equity>0?fmt(riskPct,1):'?'}% of equity)\n`;
+  ctx+=`# Risk Mode: ${getRiskSettings().mode==='fixed'?'FIXED £':'% OF EQUITY'} | ${getRiskLabel()}\n`;
+  ctx+='#\n# OPEN POSITIONS\n';
+  
+  if(open.length===0){ctx+='# None\n'}
+  else{
+    ctx+='# Instrument,Direction,Entry,Stop,£/pt,£Risk,LiveRisk,BE,Score,Timeframe\n';
+    open.forEach(t=>{
+      ctx+=`# ${t.instrument},${t.direction.toUpperCase()},${t.entry},${t.stop},£${t.stake},£${fmt(calcRisk(t))},£${fmt(calcLiveRisk(t))},${t.breakeven?'YES':'NO'},${totalScore(t)}/10,${t.timeframe||'-'}\n`;
+    });
+  }
+  
+  // Correlation warnings between open positions and screener setups
+  ctx+='#\n# CORRELATION WARNINGS\n';
+  const openInsts=open.map(t=>t.instrument);
+  const etfToInst={'XLE':'Brent','USO':'Brent','UNG':'Nat Gas','GLD':'Gold','SLV':'Silver','CPER':'Copper','SPY':'S&P 500','QQQ':'Nasdaq 100','DIA':'S&P 500','IWM':'S&P 500','IWF':'Nasdaq 100'};
+  // Map open positions to related ETFs for correlation
+  const openRelated={};
+  open.forEach(t=>{
+    Object.entries(etfToInst).forEach(([etf,inst])=>{
+      if(t.instrument===inst){if(!openRelated[etf])openRelated[etf]=[];openRelated[etf].push(t)}
+    });
+  });
+  
+  let warnings=[];
+  data.filter(r=>r.setup!=='None').forEach(r=>{
+    // Check direct match
+    if(openRelated[r.ticker]){
+      const pos=openRelated[r.ticker];
+      warnings.push(`# ⚠ ${r.ticker} (${ETF_UNIVERSE[r.ticker]}): You already have ${pos.map(p=>p.instrument+' '+p.direction.toUpperCase()).join(', ')} — DIRECT OVERLAP`);
+    }
+    // Check correlation with open positions via screener data
+    const thisData=screenerData.find(s=>s.ticker===r.ticker);
+    if(thisData&&thisData.closes63){
+      data.filter(s=>openRelated[s.ticker]).forEach(s=>{
+        const sData=screenerData.find(x=>x.ticker===s.ticker);
+        if(sData&&sData.closes63){
+          const corr=calcPearson(thisData.closes63,sData.closes63);
+          if(corr>0.7)warnings.push(`# ⚠ ${r.ticker} correlates ${corr.toFixed(2)} with ${s.ticker} — HIGH overlap with your ${openRelated[s.ticker].map(p=>p.instrument).join('/')} position`);
+        }
+      });
+    }
+  });
+  if(warnings.length===0)ctx+='# None — no correlation conflicts detected\n';
+  else warnings.forEach(w=>ctx+=w+'\n');
+  
+  // Risk allocation guidance
+  const rs=getRiskSettings();
+  ctx+='#\n# RISK GUIDANCE\n';
+  ctx+=`# Mode: ${rs.mode==='fixed'?'FIXED £ SIZING':'% OF EQUITY'}\n`;
+  ctx+=`# Per-trade risk: £${fmt(getRiskLimit('trade'))}\n`;
+  ctx+=`# Per-instrument max: £${fmt(getRiskLimit('instrument'))}\n`;
+  ctx+=`# Per-correlated-group max: £${fmt(getRiskLimit('corrGroup'))}\n`;
+  ctx+='# Positions at BE do not consume risk budget — consider moving stops to BE to free capacity\n';
+  const bePositions=open.filter(t=>t.breakeven);
+  const nonBE=open.filter(t=>!t.breakeven);
+  if(bePositions.length>0)ctx+='# BE positions: '+bePositions.map(t=>t.instrument).join(', ')+' (£0 risk)\n';
+  if(nonBE.length>0)ctx+='# Active risk: '+nonBE.map(t=>t.instrument+' £'+fmt(calcRisk(t))).join(', ')+'\n';
+  const totalUsed=nonBE.reduce((s,t)=>s+calcLiveRisk(t),0);
+  ctx+=`# Total active risk: £${fmt(totalUsed)}\n`;
+  
+  ctx+='#\n# INSTRUCTIONS FOR CLAUDE\n';
+  ctx+='# 1. Rate each setup as A-tier (take now), B-tier (watch for confirmation), or C-tier (pass)\n';
+  ctx+='# 2. Flag ANY correlation >0.7 with existing open positions as a WARNING\n';
+  ctx+=`# 3. If adding a trade would exceed £${fmt(getRiskLimit('instrument'))} per instrument or £${fmt(getRiskLimit('corrGroup'))} per correlated group, suggest moving an existing position to BE first\n`;
+  ctx+='# 4. Consider the overall portfolio balance — long/short, sector concentration, macro theme overlap\n';
+  ctx+=`# 5. For each A-tier setup, suggest: entry zone, stop level, position size in £/pt that keeps risk at £${fmt(getRiskLimit('trade'))} per trade\n`;
+  ctx+='# 6. When searching TradingView, use the TVSymbol column (e.g. AMEX:XLE, NASDAQ:QQQ) to get the correct ETF\n';
+  ctx+='# 7. Generate a watchlist JSON that I can import into my trade journal\n';
+  ctx+='#\n';
+  
+  // Screener data
+  const headers='Ticker,Exchange,TVSymbol,Name,Close,TrendValid,TrendScore,RSScore,1MReturn,3MReturn,6MReturn,12MReturn,Setup,RSI,%From21EMA,%From50EMA,%From50dHigh,20dRange,50dRange,VolVsAvg,Context';
+  const rows=data.map(r=>{
+    let c='';
+    const exch=ETF_EXCHANGE[r.ticker]||'AMEX';
+    if(r.setup==='Pullback')c=`Pullback: ${Math.abs(r.pct21).toFixed(1)}% from 21EMA RSI ${r.rsi.toFixed(0)}`;
+    else if(r.setup==='VCP')c=`VCP: range contracted ${((1-r.range20/r.range50)*100).toFixed(0)}% price ${Math.abs(r.pct50H).toFixed(1)}% from 50d high`;
+    else c=`No setup: trend ${r.trendScore}/10 RS ${r.rsScore}`;
+    return[r.ticker,exch,`${exch}:${r.ticker}`,`"${ETF_UNIVERSE[r.ticker]||''}"`,r.close.toFixed(2),r.trendValid,r.trendScore,r.rsScore,r.ret1m.toFixed(2),r.ret3m.toFixed(2),r.ret6m.toFixed(2),r.ret12m.toFixed(2),r.setup,r.rsi.toFixed(1),r.pct21.toFixed(2),r.pct50.toFixed(2),r.pct50H.toFixed(2),r.range20.toFixed(2),r.range50.toFixed(2),r.volRatio.toFixed(2),`"${c}"`].join(',');
+  });
+  
+  const csv=ctx+headers+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`velox_screener_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ETF CORRELATION — Pearson on 63-day daily returns
+function calcPearson(a,b){
+  const n=Math.min(a.length,b.length);if(n<10)return 0;
+  const xa=a.slice(-n),xb=b.slice(-n);
+  const ra=[],rb=[];
+  for(let i=1;i<n;i++){ra.push((xa[i]-xa[i-1])/xa[i-1]);rb.push((xb[i]-xb[i-1])/xb[i-1])}
+  const mn=ra.length;if(mn<5)return 0;
+  const avgA=ra.reduce((s,v)=>s+v,0)/mn,avgB=rb.reduce((s,v)=>s+v,0)/mn;
+  let num=0,denA=0,denB=0;
+  for(let i=0;i<mn;i++){const da=ra[i]-avgA,db=rb[i]-avgB;num+=da*db;denA+=da*da;denB+=db*db}
+  const den=Math.sqrt(denA*denB);return den===0?0:num/den;
+}
+
+function renderETFCorrelation(){
+  const items=screenerData.filter(r=>r.closes63&&r.closes63.length>=20);
+  if(items.length<2)return'<div class="empty"><p>Run scan first — need price data for correlation</p></div>';
+  let show=items.filter(r=>r.setup!=='None'||r.trendValid).sort((a,b)=>b.trendScore-a.trendScore).slice(0,25);
+  if(show.length<2)show=items.slice(0,25);
+  return`<div style="margin-bottom:12px;font-size:11px;color:var(--text2)">63-day return correlation (Pearson) · <span style="color:var(--red);font-weight:600">Red >0.7 (high overlap)</span> · <span style="color:var(--amber)">Amber 0.4–0.7</span> · <span style="color:var(--text2)">Grey &lt;0.4</span> · <span style="color:var(--green)">Green negative (hedge)</span></div>
+<div class="table-wrap"><table class="corr-table">
+<thead><tr><th></th>${show.map(r=>`<th title="${ETF_UNIVERSE[r.ticker]||''}">${r.ticker}</th>`).join('')}</tr></thead>
+<tbody>${show.map(a=>`<tr><th title="${ETF_UNIVERSE[a.ticker]||''}">${a.ticker}</th>${show.map(b=>{
+  if(a.ticker===b.ticker)return'<td class="corr-self">—</td>';
+  const c=calcPearson(a.closes63,b.closes63);
+  const cls=c>0.7?'corr-high':c>0.4?'corr-med':c<0?'corr-neg':'corr-low';
+  return'<td class="'+cls+'">'+c.toFixed(2)+'</td>';
+}).join('')}</tr>`).join('')}
+</tbody></table></div>`;
+}
+
+function renderSettings(){const cfg=getGHConfig();const rs=getRiskSettings();return`<div class="form-section"><h3>Risk Settings</h3>
+<div style="display:flex;gap:12px;margin-bottom:16px">
+<button class="btn-sm ${rs.mode==='fixed'?'btn-primary':'btn-secondary'}" onclick="updateRiskMode('fixed')">Fixed £ Sizing</button>
+<button class="btn-sm ${rs.mode==='pct'?'btn-primary':'btn-secondary'}" onclick="updateRiskMode('pct')">% of Equity</button>
+</div>
+${rs.mode==='fixed'?`<div class="form-grid">
+<div class="form-group"><label>£ Risk per Trade</label><input type="number" id="rs_trade" value="${rs.perTrade}" step="any"></div>
+<div class="form-group"><label>£ Max per Instrument</label><input type="number" id="rs_inst" value="${rs.perInstrument}" step="any"></div>
+<div class="form-group"><label>£ Max per Corr Group</label><input type="number" id="rs_corr" value="${rs.perCorrGroup}" step="any"></div>
+</div>
+<div class="form-actions" style="margin-top:12px"><button class="btn-primary" onclick="saveRiskSett()">Save Risk Settings</button></div>`
+:`<p style="font-size:12px;color:var(--text2);margin-top:8px">Using percentage mode: 2% per trade, 2% per instrument, 4% per correlated group. Based on current equity.</p>`}
+<div id="riskMsg" style="margin-top:8px;font-size:12px"></div>
+</div>
+<div class="form-section"><h3>GitHub Sync</h3><p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">Data stored as <code style="color:var(--accent)">data/trades.json</code>. Auto-pushes on save.</p><div class="form-grid"><div class="form-group"><label>Username</label><input type="text" id="gh_owner" value="${cfg.owner||''}" placeholder="username"></div><div class="form-group"><label>Repository</label><input type="text" id="gh_repo" value="${cfg.repo||''}" placeholder="trade-journal"></div><div class="form-group form-full"><label>Token</label><input type="password" id="gh_token" value="${cfg.token||''}" placeholder="github_pat_..."></div></div><p style="font-size:11px;color:var(--text2);margin-top:12px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--accent)">Create token</a> → Fine-grained → repo → Contents: Read and write</p><div class="form-actions" style="margin-top:16px"><button class="btn-primary" onclick="saveSett()">Save</button><button class="btn-secondary" onclick="testGH()">Test</button></div><div id="settingsMsg" style="margin-top:12px;font-size:12px"></div></div>`}
+function updateRiskMode(mode){const rs=getRiskSettings();rs.mode=mode;saveRiskSettings(rs);render()}
+function saveRiskSett(){const rs=getRiskSettings();rs.perTrade=parseFloat(document.getElementById('rs_trade')?.value)||100;rs.perInstrument=parseFloat(document.getElementById('rs_inst')?.value)||200;rs.perCorrGroup=parseFloat(document.getElementById('rs_corr')?.value)||400;saveRiskSettings(rs);const e=document.getElementById('riskMsg');if(e){e.textContent='✓ Risk settings saved';e.style.color='var(--green)'}}
+function saveSett(){saveGHConfig({owner:document.getElementById('gh_owner').value.trim(),repo:document.getElementById('gh_repo').value.trim(),token:document.getElementById('gh_token').value.trim()});const e=document.getElementById('settingsMsg');if(e){e.textContent='✓ Saved';e.style.color='var(--green)'}}
+async function testGH(){saveSett();const c=getGHConfig(),e=document.getElementById('settingsMsg');if(!c.token||!c.owner||!c.repo){if(e){e.textContent='✗ Fill all fields';e.style.color='var(--red)'}return}if(e){e.textContent='Testing...';e.style.color='var(--amber)'}try{const r=await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}`,{headers:{Authorization:`token ${c.token}`}});if(r.ok){const d=await r.json();if(e){e.innerHTML=`✓ <strong>${d.full_name}</strong>`;e.style.color='var(--green)'}}else if(e){e.textContent=`✗ ${r.status}`;e.style.color='var(--red)'}}catch(er){if(e){e.textContent='✗ Error';e.style.color='var(--red)'}}}
+function exportData(){const b=new Blob([JSON.stringify({trades,watchlist,cashflows:getCashflows(),equityHistory:getEquityHistory()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`velox_${new Date().toISOString().slice(0,10)}.json`;a.click()}
+function importData(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d)){if(confirm(`Import ${d.length} trades?`)){trades=d;save();render()}}else if(d.trades){if(confirm(`Import ${d.trades.length} trades?`)){trades=d.trades;if(d.watchlist){watchlist=d.watchlist;INSTRUMENTS.forEach(i=>{if(!watchlist[i])watchlist[i]={status:'NOT IN PLAY',note:''}})}if(d.cashflows)saveCashflows(d.cashflows);if(d.equityHistory)localStorage.setItem('velox_equity_history',JSON.stringify(d.equityHistory));save();render()}}}catch(err){alert('Invalid JSON')}};r.readAsText(f);ev.target.value=''}
+async function init(){render();const c=getGHConfig();if(c.token&&c.owner&&c.repo)await syncFromGitHub()}init();
 </script>
 </body>
 </html>
