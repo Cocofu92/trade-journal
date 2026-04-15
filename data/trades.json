@@ -105,10 +105,11 @@
       ],
       "notes": "Long TTM August contract. rebound off the 200ema. ",
       "screenshot": "https://www.tradingview.com/x/mDg02959/",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 3
+      "status": "loss",
+      "closePrice": 4118,
+      "pnl": -96.6,
+      "decimals": 3,
+      "actualRR": -0.5390624999999999
     },
     {
       "id": "mnrjd9mfidf5",
