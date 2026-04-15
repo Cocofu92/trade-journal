@@ -410,18 +410,15 @@ function analyzeETF(ticker,bars){
     const nearEma=Math.abs(pct21)<=3||Math.abs(pct50)<=4;
     if(nearEma&&rsiVal>=40&&rsiVal<=65)setup='Pullback';
     else {
-      // VCP: Volatility Contraction Pattern (Minervini)
-      // Requires: 50d > 21d > 10d range contraction (successive tightening)
-      // Each contraction must be meaningful (at least 25% tighter than prior)
-      // Max depth: 50d range must be <20% of price (not a crash recovery)
-      // Price must be in top 25% of 50d range (contracting at highs, not lows)
-      // Duration: 50d window ensures 4+ weeks minimum
+      // VCP: Volatility Contraction Pattern
+      // 50d > 21d > 10d range contraction
+      // Max depth: 50d range <30% of price (filters crash recoveries only)
+      // Price in top half of 50d range (not contracting at lows)
       const maxDepthPct=range50/last50H*100;
       const rangeContracts=range50>range20&&range20>range10;
-      const meaningfulContract=(range20/range50)<0.75&&(range10/range20)<0.75;
-      const nearHighs=cl>=(last50L+(range50*0.75));
-      const notTooDeep=maxDepthPct<20;
-      if(rangeContracts&&meaningfulContract&&nearHighs&&notTooDeep){
+      const nearHighs=cl>=(last50L+(range50*0.5));
+      const notTooDeep=maxDepthPct<30;
+      if(rangeContracts&&nearHighs&&notTooDeep){
         const volDecline=volumes.slice(-20).reduce((a,b)=>a+b,0)<volumes.slice(-50,-30).reduce((a,b)=>a+b,0);
         if(volDecline||!screenerFilter.volConfirm)setup='VCP';
       }
