@@ -218,10 +218,11 @@
       ],
       "notes": "",
       "screenshot": "https://www.tradingview.com/x/2tfIEH08/",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 3
+      "status": "win",
+      "closePrice": 3622.6,
+      "pnl": 45.96,
+      "decimals": 3,
+      "actualRR": 3.5009140767824616
     },
     {
       "id": "mnywtsv3bktm",
