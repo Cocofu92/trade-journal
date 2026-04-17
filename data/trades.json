@@ -273,10 +273,11 @@
       ],
       "notes": "",
       "screenshot": "",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 3
+      "status": "loss",
+      "closePrice": 26449.4,
+      "pnl": -35.24,
+      "decimals": 3,
+      "actualRR": -1.0005678591709133
     }
   ],
   "watchlist": {
