@@ -189,10 +189,11 @@
       ],
       "notes": "",
       "screenshot": "",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 3
+      "status": "loss",
+      "closePrice": 9103.9,
+      "pnl": -108.22,
+      "decimals": 3,
+      "actualRR": -0.6045810055865922
     },
     {
       "id": "mnywr3i5qbod",
