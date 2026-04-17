@@ -162,10 +162,11 @@
       ],
       "notes": "",
       "screenshot": "",
-      "status": "open",
-      "closePrice": null,
-      "pnl": null,
-      "decimals": 2
+      "status": "loss",
+      "closePrice": 9103.9,
+      "pnl": -117.8,
+      "decimals": 3,
+      "actualRR": -1.3176733780760626
     },
     {
       "id": "mnxmmvan27kt",
