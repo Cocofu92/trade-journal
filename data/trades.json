@@ -304,7 +304,8 @@
       "status": "open",
       "closePrice": null,
       "pnl": null,
-      "decimals": 3
+      "decimals": 3,
+      "breakeven": true
     }
   ],
   "watchlist": {
