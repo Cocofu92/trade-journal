@@ -281,8 +281,8 @@
     },
     {
       "id": "mo308gesbu1k",
-      "instrument": "Brent",
-      "assetClass": "Commodities",
+      "instrument": "Nikkei 225",
+      "assetClass": "Indices",
       "marginPct": 5,
       "leverage": "1:20",
       "direction": "short",
@@ -304,8 +304,7 @@
       "status": "open",
       "closePrice": null,
       "pnl": null,
-      "decimals": 3,
-      "breakeven": true
+      "decimals": 3
     }
   ],
   "watchlist": {
