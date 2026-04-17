@@ -365,6 +365,12 @@
       "amount": 300,
       "date": "2026-04-14",
       "id": "mnywu3mlwgbl"
+    },
+    {
+      "type": "deposit",
+      "amount": 56.14,
+      "date": "2026-04-17",
+      "id": "mo30a5vl9c3q"
     }
   ],
   "equityHistory": [
