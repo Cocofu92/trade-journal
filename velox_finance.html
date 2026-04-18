@@ -550,8 +550,29 @@ ${S.income.map(i=>`<div style="display:flex;justify-content:space-between;align-
 function qUpdate(id){const a=S.accounts.find(a=>a.id===id);if(!a)return;const v=prompt(`${a.name}\nCurrent: ${gbp(a.balance)}\n\nEnter new balance (negative for debt):`);if(v===null)return;a.balance=parseFloat(v)||0;save();render();}
 function addAc(){const n=document.getElementById('fa_n').value.trim();if(!n)return;S.accounts.push({id:uid(),name:n,type:document.getElementById('fa_t').value,balance:parseFloat(document.getElementById('fa_b').value)||0,group:document.getElementById('fa_g').value,apr:parseFloat(document.getElementById('fa_a').value)||0,minPayment:parseFloat(document.getElementById('fa_m').value)||0,zeroIntUntil:document.getElementById('fa_z').value||null,notes:document.getElementById('fa_nt').value});save();render();}
 function rmAc(id){if(!confirm('Remove?'))return;S.accounts=S.accounts.filter(a=>a.id!==id);save();render();}
-function addInc(){const n=document.getElementById('fi_n').value.trim();if(!n)return;S.income.push({id:uid(),name:n,amount:parseFloat(document.getElementById('fi_a').value)||0,freq:document.getElementById('fi_f').value});save();render();}
-function addBill(){const n=document.getElementById('fb_n').value.trim();if(!n)return;S.bills.push({id:uid(),name:n,amount:parseFloat(document.getElementById('fb_a').value)||0,cat:document.getElementById('fb_c').value});save();render();}
+function addInc(){
+  const n=document.getElementById('fi_n').value.trim();
+  const a=parseFloat(document.getElementById('fi_a').value)||0;
+  if(!n||!a)return;
+  S.income.push({id:uid(),name:n,amount:a,freq:document.getElementById('fi_f').value});
+  save();
+  document.getElementById('fi_n').value='';document.getElementById('fi_a').value='';
+  const btn=document.querySelector('[onclick="addInc()"]');
+  const orig=btn.textContent;btn.textContent='✓ Added';btn.style.background='rgba(61,214,140,.2)';
+  setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);
+}
+function addBill(){
+  const n=document.getElementById('fb_n').value.trim();
+  const a=parseFloat(document.getElementById('fb_a').value)||0;
+  if(!n){document.getElementById('fb_n').style.borderColor='var(--red)';setTimeout(()=>document.getElementById('fb_n').style.borderColor='',2000);return;}
+  if(!a){document.getElementById('fb_a').style.borderColor='var(--red)';setTimeout(()=>document.getElementById('fb_a').style.borderColor='',2000);return;}
+  S.bills.push({id:uid(),name:n,amount:a,cat:document.getElementById('fb_c').value});
+  save();
+  document.getElementById('fb_n').value='';document.getElementById('fb_a').value='';
+  const btn=document.querySelector('[onclick="addBill()"]');
+  const orig=btn.textContent;btn.textContent='✓ Bill added';btn.style.background='rgba(61,214,140,.2)';
+  setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);
+}
 function rmBill(id){S.bills=S.bills.filter(b=>b.id!==id);save();render();}
 function snapNW(){const n=nw();const t=today();S.netWorthHistory=S.netWorthHistory.filter(h=>h.date!==t);S.netWorthHistory.push({date:t,value:n});S.netWorthHistory.sort((a,b)=>new Date(a.date)-new Date(b.date));save();render();}
 function buildFinancialBrief(){
@@ -692,7 +713,7 @@ async function parseStatement(file){
   // Detect type column — catches direct debits regardless of merchant name
   const typeCol=headers.findIndex(h=>h.includes('type')||h==='type');
   const isDDRow=typeCol>=0
-    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct debit')||t==='dd'; }
+    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct debit')||t==='dd'||t==='direct_debit'||t==='transfer'||t==='faster_payment'; }
     : ()=>false;
 
   // Extract outgoing transactions with names and amounts
