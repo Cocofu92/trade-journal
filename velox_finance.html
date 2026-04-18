@@ -520,31 +520,48 @@ ${S.accounts.map(a=>`<tr><td><div style="font-weight:700;color:var(--white)">${a
 }
 
 function renderSettings(){
-  return`<div class="cf-grid">
+  return`
+<div style="display:flex;flex-direction:column;gap:20px">
 <div class="form-card"><h4>Add Income Stream</h4>
 <div class="form-row">
 <div class="field"><label>Source</label><input type="text" id="fi_n" placeholder="e.g. Freelance"></div>
-<div class="field"><label>Amount £</label><input type="number" id="fi_a" step="0.01"></div>
+<div class="field"><label>Amount £/mo</label><input type="number" id="fi_a" step="0.01"></div>
 <div class="field"><label>Frequency</label><select id="fi_f"><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div>
 </div>
 <button class="btn btn-g" id="addIncBtn" onclick="addInc()">Add Income</button>
 <div style="margin-top:18px;display:flex;flex-direction:column;gap:6px">
-${S.income.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--bg3);border-radius:10px"><span style="color:var(--white);font-weight:600">${i.name}</span><span style="color:var(--green);font-weight:700">${gbp(i.amount)}/mo</span></div>`).join('')}
+${S.income.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--bg3);border-radius:10px">
+  <span style="color:var(--white);font-weight:600">${i.name}</span>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="color:var(--green);font-weight:700">${gbp(i.amount)}/mo</span>
+    <button class="btn btn-r" style="padding:4px 10px;font-size:11px" onclick="rmInc('${i.id}')">×</button>
+  </div>
+</div>`).join('')}
 </div>
 </div>
+
 <div class="form-card"><h4>Add Bill</h4>
 <div class="form-row">
 <div class="field"><label>Name</label><input type="text" id="fb_n" placeholder="e.g. Gym"></div>
 <div class="field"><label>Amount £/mo</label><input type="number" id="fb_a" step="0.01"></div>
-<div class="field"><label>Category</label><select id="fb_c"><option value="housing">Housing</option><option value="utilities">Utilities</option><option value="insurance">Insurance</option><option value="transport">Transport</option><option value="subscriptions">Subscriptions</option><option value="debt">Debt</option><option value="other">Other</option></select></div>
+<div class="field"><label>Category</label><select id="fb_c">
+  <option value="housing">Housing</option>
+  <option value="utilities">Utilities</option>
+  <option value="insurance">Insurance</option>
+  <option value="transport">Transport</option>
+  <option value="subscriptions">Subscriptions</option>
+  <option value="debt">Debt</option>
+  <option value="other">Other</option>
+</select></div>
 </div>
 <button class="btn btn-g" id="addBillBtn" onclick="addBill()">Add Bill</button>
 </div>
-</div>
+
 <div class="form-card"><h4>Data</h4><div style="display:flex;gap:10px">
 <button class="btn" onclick="exportD()">Export JSON</button>
-<button class="btn btn-r" onclick="if(confirm('Reset?')){localStorage.removeItem('vf3');location.reload()}">Reset all data</button>
-</div></div>`;
+<button class="btn btn-r" onclick="if(confirm('Reset all data to defaults?')){localStorage.removeItem('vf3');location.reload()}">Reset to defaults</button>
+</div></div>
+</div>`;
 }
 
 function qUpdate(id){const a=S.accounts.find(a=>a.id===id);if(!a)return;const v=prompt(`${a.name}\nCurrent: ${gbp(a.balance)}\n\nEnter new balance (negative for debt):`);if(v===null)return;a.balance=parseFloat(v)||0;save();render();}
@@ -572,6 +589,7 @@ function addBill(){
   if(btn){const orig=btn.textContent;btn.textContent='✓ Bill added';btn.style.background='rgba(61,214,140,.2)';setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);}
 }
 function rmBill(id){S.bills=S.bills.filter(b=>b.id!==id);save();render();}
+function rmInc(id){S.income=S.income.filter(i=>i.id!==id);save();render();}
 function snapNW(){const n=nw();const t=today();S.netWorthHistory=S.netWorthHistory.filter(h=>h.date!==t);S.netWorthHistory.push({date:t,value:n});S.netWorthHistory.sort((a,b)=>new Date(a.date)-new Date(b.date));save();render();}
 function buildFinancialBrief(){
   const n=nw(),a=assets(),l=liabs(),i=inc(),b=bills(),s=sur();
