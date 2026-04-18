@@ -287,6 +287,7 @@ function render(){
   else if(tab==='debts')c.innerHTML=renderDebts();
   else if(tab==='projection')c.innerHTML=renderProj();
   else if(tab==='accounts')c.innerHTML=renderAccounts();
+  else if(tab==='settings')c.innerHTML=renderSettings();
   else if(tab==='analyse')c.innerHTML=renderAnalyse();
 }
 
@@ -439,7 +440,14 @@ function renderCF(){
 
 <div class="sec-head"><div class="sec-title">All bills (${S.bills.length})</div><button class="btn" onclick="go('settings')">+ Add bill</button></div>
 <div class="tbl-wrap"><table><tr><th>Bill</th><th>Category</th><th>Amount/mo</th><th></th></tr>
-${S.bills.map(x=>`<tr><td style="color:var(--white);font-weight:600">${x.name}</td><td style="color:${x.cat==='debt'?'var(--amber)':'var(--text2)'};text-transform:capitalize;font-weight:${x.cat==='debt'?'700':'400'}">${x.cat}</td><td style="color:${x.cat==='debt'?'var(--amber)':'var(--red)'};font-weight:700">${gbp(x.amount)}</td><td><button class="btn btn-r" onclick="rmBill('${x.id}')">Remove</button></td></tr>`).join('')}
+${S.bills.map(x=>`<tr>
+<td style="color:var(--white);font-weight:600">${x.name}</td>
+<td><select onchange="updateBillCat('${x.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:${x.cat==='debt'?'var(--amber)':x.cat==='other'?'var(--text2)':'var(--text)'};font-size:12px;padding:4px 8px;font-family:var(--sans);cursor:pointer">
+${['housing','utilities','insurance','transport','subscriptions','debt','other'].map(c=>`<option value="${c}" ${x.cat===c?'selected':''}>${c}</option>`).join('')}
+</select></td>
+<td style="color:${x.cat==='debt'?'var(--amber)':'var(--red)'};font-weight:700">${gbp(x.amount)}</td>
+<td><button class="btn btn-r" style="padding:5px 12px;font-size:12px" onclick="rmBill('${x.id}')">×</button></td>
+</tr>`).join('')}
 </table></div>`;
 }
 
@@ -590,6 +598,7 @@ function addBill(){
 }
 function rmBill(id){S.bills=S.bills.filter(b=>b.id!==id);save();render();}
 function rmInc(id){S.income=S.income.filter(i=>i.id!==id);save();render();}
+function updateBillCat(id,cat){const b=S.bills.find(b=>b.id===id);if(b){b.cat=cat;save();}}
 function snapNW(){const n=nw();const t=today();S.netWorthHistory=S.netWorthHistory.filter(h=>h.date!==t);S.netWorthHistory.push({date:t,value:n});S.netWorthHistory.sort((a,b)=>new Date(a.date)-new Date(b.date));save();render();}
 function buildFinancialBrief(){
   const n=nw(),a=assets(),l=liabs(),i=inc(),b=bills(),s=sur();
@@ -729,7 +738,7 @@ async function parseStatement(file){
   // Detect type column — catches direct debits regardless of merchant name
   const typeCol=headers.findIndex(h=>h.includes('type')||h==='type');
   const isDDRow=typeCol>=0
-    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct debit')||t==='dd'||t==='direct_debit'||t==='transfer'||t==='faster_payment'; }
+    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct_debit')||t.includes('direct debit')||t==='dd'||t==='transfer'||t==='faster_payment'||t==='standing_order'; }
     : ()=>false;
 
   // Extract outgoing transactions with names and amounts
