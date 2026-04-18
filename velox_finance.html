@@ -689,6 +689,12 @@ async function parseStatement(file){
     </div>`;return;
   }
 
+  // Detect type column — catches direct debits regardless of merchant name
+  const typeCol=headers.findIndex(h=>h.includes('type')||h==='type');
+  const isDDRow=typeCol>=0
+    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct debit')||t==='dd'; }
+    : ()=>false;
+
   // Extract outgoing transactions with names and amounts
   const txns=rows.map(r=>{
     const raw=r[amtCol]||'';
@@ -706,12 +712,6 @@ async function parseStatement(file){
     'santander consumer','alphera','motonovus','vehicle','motor','auto','pcf','pcp','hitachi',
     'close brothers','bnp paribas','fca automotive','caf','cazoo','cinch','arnold clark'
   ];
-
-  // Detect type column — catches direct debits regardless of merchant name
-  const typeCol=headers.findIndex(h=>h.includes('type')||h==='type');
-  const isDDRow=typeCol>=0
-    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct debit')||t==='dd'; }
-    : ()=>false;
 
   const debtPayments=txns.filter(t=>{
     const low=t.name.toLowerCase();
