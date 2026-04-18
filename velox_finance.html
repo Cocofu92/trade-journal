@@ -527,7 +527,7 @@ function renderSettings(){
 <div class="field"><label>Amount £</label><input type="number" id="fi_a" step="0.01"></div>
 <div class="field"><label>Frequency</label><select id="fi_f"><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div>
 </div>
-<button class="btn btn-g" onclick="addInc()">Add Income</button>
+<button class="btn btn-g" id="addIncBtn" onclick="addInc()">Add Income</button>
 <div style="margin-top:18px;display:flex;flex-direction:column;gap:6px">
 ${S.income.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--bg3);border-radius:10px"><span style="color:var(--white);font-weight:600">${i.name}</span><span style="color:var(--green);font-weight:700">${gbp(i.amount)}/mo</span></div>`).join('')}
 </div>
@@ -538,7 +538,7 @@ ${S.income.map(i=>`<div style="display:flex;justify-content:space-between;align-
 <div class="field"><label>Amount £/mo</label><input type="number" id="fb_a" step="0.01"></div>
 <div class="field"><label>Category</label><select id="fb_c"><option value="housing">Housing</option><option value="utilities">Utilities</option><option value="insurance">Insurance</option><option value="transport">Transport</option><option value="subscriptions">Subscriptions</option><option value="debt">Debt</option><option value="other">Other</option></select></div>
 </div>
-<button class="btn btn-g" onclick="addBill()">Add Bill</button>
+<button class="btn btn-g" id="addBillBtn" onclick="addBill()">Add Bill</button>
 </div>
 </div>
 <div class="form-card"><h4>Data</h4><div style="display:flex;gap:10px">
@@ -557,9 +557,8 @@ function addInc(){
   S.income.push({id:uid(),name:n,amount:a,freq:document.getElementById('fi_f').value});
   save();
   document.getElementById('fi_n').value='';document.getElementById('fi_a').value='';
-  const btn=document.querySelector('[onclick="addInc()"]');
-  const orig=btn.textContent;btn.textContent='✓ Added';btn.style.background='rgba(61,214,140,.2)';
-  setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);
+  const btn=document.getElementById('addIncBtn');
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Added';btn.style.background='rgba(61,214,140,.2)';setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);}
 }
 function addBill(){
   const n=document.getElementById('fb_n').value.trim();
@@ -569,9 +568,8 @@ function addBill(){
   S.bills.push({id:uid(),name:n,amount:a,cat:document.getElementById('fb_c').value});
   save();
   document.getElementById('fb_n').value='';document.getElementById('fb_a').value='';
-  const btn=document.querySelector('[onclick="addBill()"]');
-  const orig=btn.textContent;btn.textContent='✓ Bill added';btn.style.background='rgba(61,214,140,.2)';
-  setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);
+  const btn=document.getElementById('addBillBtn');
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Bill added';btn.style.background='rgba(61,214,140,.2)';setTimeout(()=>{btn.textContent=orig;btn.style.background='';},2000);}
 }
 function rmBill(id){S.bills=S.bills.filter(b=>b.id!==id);save();render();}
 function snapNW(){const n=nw();const t=today();S.netWorthHistory=S.netWorthHistory.filter(h=>h.date!==t);S.netWorthHistory.push({date:t,value:n});S.netWorthHistory.sort((a,b)=>new Date(a.date)-new Date(b.date));save();render();}
