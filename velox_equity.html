@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Velox Equity">
+<meta name="theme-color" content="#090b0d">
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Velox%20Equity%20Screener%22,%22short_name%22:%22VeloxEQ%22,%22start_url%22:%22velox_equity.html%22,%22display%22:%22standalone%22,%22background_color%22:%22%23090b0d%22,%22theme_color%22:%22%2300c896%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20512%20512'%3E%3Crect%20width%3D'512'%20height%3D'512'%20rx%3D'80'%20fill%3D'%23090b0d'%2F%3E%3Ctext%20x%3D'256'%20y%3D'340'%20font-size%3D'280'%20text-anchor%3D'middle'%20fill%3D'%2300c896'%20font-family%3D'serif'%3EE%3C%2Ftext%3E%3C%2Ftext%3E%3C%2Fsvg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22any%20maskable%22}]}">
+<title>Velox Equity</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#090b0d;--bg2:#0f1216;--bg3:#161b22;--border:#1e2530;--text:#b8c0cc;--text2:#5a6478;--white:#e8edf3;--green:#00c896;--red:#ff4757;--amber:#ffa502;--blue:#3b82f6;--mono:'JetBrains Mono',monospace;--serif:'DM Serif Display',serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;min-height:100vh}
+::selection{background:var(--green);color:#000}
+.app{max-width:1280px;margin:0 auto;padding:16px}
+
+/* Header */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.brand h1{font-family:var(--serif);font-size:24px;color:var(--white);letter-spacing:.5px}
+.brand .sub{font-size:9px;color:var(--text2);letter-spacing:3px;text-transform:uppercase;margin-top:2px}
+.header-meta{font-size:10px;color:var(--text2);text-align:right}
+
+/* Tabs */
+.tabs{display:flex;gap:1px;margin-bottom:16px;background:var(--border);border-radius:6px;padding:1px;width:fit-content}
+.tab{padding:8px 20px;border-radius:5px;cursor:pointer;font-size:11px;color:var(--text2);font-weight:500;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg3);color:var(--white);font-weight:600}
+
+/* Buttons */
+.btn{padding:7px 16px;border:1px solid var(--border);border-radius:4px;background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s}
+.btn:hover{border-color:var(--text2);color:var(--white)}
+.btn-green{background:rgba(0,200,150,.12);border-color:var(--green);color:var(--green);font-weight:600}
+.btn-green:hover{background:rgba(0,200,150,.2)}
+.btn-red{border-color:var(--red);color:var(--red)}
+.btn-sm{padding:4px 10px;font-size:10px}
+
+/* Progress */
+.progress-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
+.prog-label{font-size:11px;color:var(--text);margin-bottom:8px}
+.prog-bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+.prog-stats{display:flex;gap:24px;margin-top:10px}
+.prog-stat{font-size:10px;color:var(--text2)}
+.prog-stat span{color:var(--white);font-weight:600}
+
+/* Filter bar */
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;padding:12px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)}
+.filter-bar label{font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.filter-bar input,.filter-bar select{padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--white);font-family:var(--mono);font-size:11px;width:auto}
+.filter-bar input{width:70px}
+.filter-group{display:flex;align-items:center;gap:6px}
+
+/* Sub-tabs */
+.sub-tabs{display:flex;gap:6px;margin-bottom:12px}
+.sub-tab{padding:5px 14px;border:1px solid var(--border);border-radius:3px;cursor:pointer;font-size:10px;color:var(--text2)}
+.sub-tab.active{border-color:var(--green);color:var(--green);background:rgba(0,200,150,.08)}
+
+/* Table */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:9px 12px;background:var(--bg2);color:var(--text2);font-size:9px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+th:hover{color:var(--text)}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border:none}
+tr:hover td{background:var(--bg2)}
+.ticker-cell{font-weight:700;color:var(--white)}
+.name-cell{color:var(--text2);font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-hi{color:var(--green);font-weight:600}
+.rs-mid{color:var(--amber)}
+.rs-lo{color:var(--red)}
+.setup-vcp{color:var(--blue);font-weight:600}
+.setup-pb{color:var(--green);font-weight:600}
+.setup-none{color:var(--text2)}
+.trend-ok{color:var(--green)}
+.trend-no{color:var(--red)}
+
+/* Industry table */
+.industry-grid{display:grid;gap:12px}
+.industry-row{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.industry-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border)}
+.industry-head:hover{background:var(--bg3)}
+.industry-name{font-weight:600;color:var(--white)}
+.industry-meta{display:flex;gap:16px;font-size:10px;color:var(--text2)}
+.industry-body{display:none;padding:8px}
+.industry-body.open{display:block}
+
+/* Journal form */
+.form-section{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.field label{display:block;font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--white);font-family:var(--mono);font-size:11px}
+.field textarea{resize:vertical;min-height:60px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--green)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px}
+.stat .lbl{font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.stat .val{font-size:18px;font-weight:700;color:var(--white);margin-top:4px}
+
+/* Curve */
+.curve{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
+.curve h4{font-size:9px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+
+.empty{text-align:center;padding:40px;color:var(--text2);font-size:11px}
+.section-head{font-size:9px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin:16px 0 10px}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600}
+.badge-green{background:rgba(0,200,150,.12);color:var(--green)}
+.badge-red{background:rgba(255,71,87,.12);color:var(--red)}
+.badge-blue{background:rgba(59,130,246,.12);color:var(--blue)}
+.badge-grey{background:rgba(90,100,120,.15);color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+<div class="brand">
+<h1>Velox Equity</h1>
+<div class="sub">NYSE · NASDAQ · Full Universe Screener</div>
+</div>
+<div class="header-meta" id="headerMeta"></div>
+</div>
+
+<div class="tabs" id="tabs">
+<div class="tab active" data-tab="screener">Screener</div>
+<div class="tab" data-tab="industry">Industry RS</div>
+<div class="tab" data-tab="journal">Journal</div>
+<div class="tab" data-tab="stats">Stats</div>
+</div>
+
+<div id="content"></div>
+
+</div>
+<script>
+const FMP_KEY='fsUwZ3RqDc7Wa2pjUyMhlLnOet1HVwUl';
+const BATCH_SIZE=3;
+const BATCH_MS=1000; // 3 calls/sec = 180/min, safe under 200/min limit
+
+let currentTab='screener';
+let scanRunning=false;
+let scanAbort=false;
+let screenerFilter={
+  minRS:80,minIndRS:0,setup:'all',trendOnly:false,
+  minPrice:2,maxPrice:0,minMcap:0,
+  // CANSLIM defaults (William O'Neil's classic thresholds)
+  minEpsGrowthQ:25,minEpsGrowthA:25,maxFromHigh:15,maxFloatM:0,minInstOwn:0,minDaysToEarnings:5,
+  canslim:true // ON by default
+};
+let screenerSubTab='setups';
+let sortCol='rsScore';let sortDir='desc';
+let industryExpanded={};
+
+// Load cached data
+let scanResults=[];let scanMeta={lastRun:null,total:0,processed:0,errors:0};
+let journalData=JSON.parse(localStorage.getItem('velox_eq_journal')||'null')||{trades:[]};
+
+// Compress full stock object to minimal keys for storage (41% smaller)
+function compressStock(r){return{
+  t:r.ticker,n:(r.name||'').slice(0,30),e:r.exchange||'',
+  sec:r.sector||'',ind:r.industry||'',p:+r.price.toFixed(2),
+  mc:Math.round((r.marketCap||0)/1e6),
+  r1:+r.ret1m.toFixed(1),r3:+r.ret3m.toFixed(1),
+  r6:+r.ret6m.toFixed(1),r12:+r.ret12m.toFixed(1),
+  rr:+r.rsRaw.toFixed(2),rs:r.rsScore,irs:r.industryRS,
+  tv:r.trendValid?1:0,ts:r.trendScore,
+  rsi:+r.rsiVal.toFixed(1),
+  p21:+r.pct21.toFixed(1),p50:+r.pct50.toFixed(1),p50h:+r.pct50H.toFixed(1),
+  r10:+r.range10.toFixed(2),r20:+r.range20.toFixed(2),r50:+r.range50.toFixed(2),
+  vr:+r.volRatio.toFixed(2),su:r.setup,
+  eq:r.epsGrowthQ!=null?+r.epsGrowthQ.toFixed(1):null,
+  ea:r.epsGrowthA!=null?+r.epsGrowthA.toFixed(1):null,
+  fl:r.floatM!=null?Math.round(r.floatM):null,
+  io:r.instOwn!=null?+r.instOwn.toFixed(0):null,
+  de:r.daysToEarnings||null
+}}
+
+// Expand compressed stock back to full field names for display/filter
+function expandStock(c){return{
+  ticker:c.t,name:c.n,exchange:c.e,sector:c.sec,industry:c.ind,
+  price:c.p,marketCap:(c.mc||0)*1e6,avgVol:0,
+  ret1m:c.r1,ret3m:c.r3,ret6m:c.r6,ret12m:c.r12,
+  rsRaw:c.rr,rsScore:c.rs,industryRS:c.irs,indMedian:0,
+  trendValid:c.tv===1,trendScore:c.ts,
+  rsiVal:c.rsi,pct21:c.p21,pct50:c.p50,pct50H:c.p50h,
+  range10:c.r10,range20:c.r20,range50:c.r50,volRatio:c.vr,setup:c.su,
+  epsGrowthQ:c.eq,epsGrowthA:c.ea,floatM:c.fl,instOwn:c.io,daysToEarnings:c.de
+}}
+
+const cached=localStorage.getItem('velox_eq_screener');
+if(cached){try{
+  const p=JSON.parse(cached);
+  // Support both old format (results[]) and new compressed format (compressed[])
+  const raw=p.compressed||p.results||[];
+  scanResults=raw.map(r=>p.compressed?expandStock(r):r);
+  scanMeta=p.meta||scanMeta;
+}catch(e){}}
+
+function saveJournal(){localStorage.setItem('velox_eq_journal',JSON.stringify(journalData))}
+function saveScreener(){
+  try{
+    const compressed=scanResults.map(compressStock);
+    localStorage.setItem('velox_eq_screener',JSON.stringify({compressed,meta:scanMeta}));
+    log(`Saved ${compressed.length} stocks to cache (${(JSON.stringify(compressed).length/1024).toFixed(0)}KB)`,'ok');
+  }catch(e){
+    log(`Cache save failed: ${e.message} — results in memory only`,'warn');
+  }
+}
+
+// Math helpers
+function ema(data,period){const k=2/(period+1);let e=data[0];const out=[e];for(let i=1;i<data.length;i++){e=data[i]*k+e*(1-k);out.push(e)}return out}
+function rsi(closes,period=14){const gains=[],losses=[];for(let i=1;i<closes.length;i++){const d=closes[i]-closes[i-1];gains.push(d>0?d:0);losses.push(d<0?-d:0)}let avgG=gains.slice(0,period).reduce((a,b)=>a+b,0)/period;let avgL=losses.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=new Array(period).fill(null);out.push(avgL===0?100:100-100/(1+avgG/avgL));for(let i=period;i<gains.length;i++){avgG=(avgG*(period-1)+gains[i])/period;avgL=(avgL*(period-1)+losses[i])/period;out.push(avgL===0?100:100-100/(1+avgG/avgL))}return out}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function fmt(n,d=2){return(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fmtPct(n){return(n>=0?'+':'')+fmt(n,1)+'%'}
+
+// Process a single stock's OHLCV into screener result
+function processStock(ticker,info,hist){
+  if(!hist||hist.length<63)return null;
+  const closes=hist.map(d=>d.close);
+  const highs=hist.map(d=>d.high||d.close);
+  const lows=hist.map(d=>d.low||d.close);
+  const volumes=hist.map(d=>d.volume||0);
+  const n=closes.length;const cl=closes[n-1];
+  if(!cl||cl<0.01)return null;
+
+  // Returns
+  const ret1m=n>=21?(cl/closes[n-21]-1)*100:0;
+  const ret3m=n>=63?(cl/closes[n-63]-1)*100:0;
+  const ret6m=n>=126?(cl/closes[n-126]-1)*100:0;
+  const ret12m=n>=252?(cl/closes[n-252]-1)*100:(n>=200?(cl/closes[0]-1)*100:0);
+  const rsRaw=ret12m*0.40+ret6m*0.25+ret3m*0.20+ret1m*0.15;
+
+  // EMAs
+  const e21arr=ema(closes,21),e50arr=ema(closes,50),e200arr=ema(closes,200);
+  const e21=e21arr[n-1],e50=e50arr[n-1],e200=e200arr[n-1];
+
+  // RSI
+  const rsiArr=rsi(closes,14);const rsiVal=rsiArr[rsiArr.length-1]||50;
+
+  // Ranges
+  const h10=Math.max(...highs.slice(-10)),l10=Math.min(...lows.slice(-10));
+  const h20=Math.max(...highs.slice(-20)),l20=Math.min(...lows.slice(-20));
+  const h50=Math.max(...highs.slice(-50)),l50=Math.min(...lows.slice(-50));
+  const range10=h10-l10,range20=h20-l20,range50=h50-l50;
+
+  // Volume
+  const vol20=volumes.slice(-20).reduce((a,b)=>a+b,0)/20;
+  const volRatio=vol20>0?volumes[n-1]/vol20:1;
+
+  // Trend
+  const trendValid=cl>e50&&e50>e200&&cl>e200;
+  let ts=0;
+  if(cl>e21)ts++;if(cl>e50)ts++;if(cl>e200)ts++;
+  if(e21>e50)ts++;if(e50>e200)ts++;
+  if(n>5&&e21arr[n-1]>e21arr[n-6])ts++;
+  if(n>5&&e50arr[n-1]>e50arr[n-6])ts++;
+  if(n>5&&e200arr[n-1]>e200arr[n-6])ts++;
+  if(cl>(h20+l20)/2)ts++;
+  if(rsiVal>50)ts++;
+
+  // Distance metrics
+  const pct21=(cl-e21)/e21*100,pct50=(cl-e50)/e50*100;
+  const pct50H=(cl-h50)/h50*100;
+
+  // Setup
+  let setup='None';
+  if(trendValid){
+    const nearEma=Math.abs(pct21)<=3||Math.abs(pct50)<=4;
+    if(nearEma&&rsiVal>=40&&rsiVal<=65){
+      setup='Pullback';
+    } else {
+      const maxDepth=range50/h50*100;
+      const contracts=range50>range20&&range20>range10;
+      const nearHighs=cl>=(l50+(range50*0.5));
+      const notDeep=maxDepth<25;
+      if(contracts&&nearHighs&&notDeep)setup='VCP';
+    }
+  }
+
+  return{
+    ticker,
+    name:info.companyName||info.name||ticker,
+    exchange:info.exchangeShortName||info.exchange||'',
+    sector:info.sector||'',
+    industry:info.industry||'Unknown',
+    price:cl,
+    marketCap:info.marketCap||0,
+    avgVol:vol20,
+    ret1m,ret3m,ret6m,ret12m,rsRaw,
+    rsScore:0,industryRS:0,indMedian:0,
+    trendValid,trendScore:ts,
+    rsiVal,pct21,pct50,pct50H,
+    range10,range20,range50,volRatio,
+    setup
+  };
+}
+
+function calcRS(results){
+  if(results.length<2)return;
+  const sorted=[...results].sort((a,b)=>a.rsRaw-b.rsRaw);
+  sorted.forEach((r,i)=>{r.rsScore=Math.round(i/(sorted.length-1)*100)});
+}
+
+function calcIndustryRS(results){
+  const map={};
+  results.forEach(r=>{if(!map[r.industry])map[r.industry]=[];map[r.industry].push(r.rsScore)});
+  const medians={};
+  Object.entries(map).forEach(([ind,scores])=>{
+    scores.sort((a,b)=>a-b);
+    const m=Math.floor(scores.length/2);
+    medians[ind]=scores.length%2===0?(scores[m-1]+scores[m])/2:scores[m];
+  });
+  const indList=Object.entries(medians).sort((a,b)=>a[1]-b[1]);
+  const ranks={};
+  indList.forEach(([ind],i)=>{ranks[ind]=Math.round(i/(indList.length-1)*100)});
+  results.forEach(r=>{r.industryRS=ranks[r.industry]||0;r.indMedian=medians[r.industry]||0});
+}
+
+// Live scan log
+let scanLog=[];
+function log(msg,type='info'){
+  const ts=new Date().toLocaleTimeString('en-GB',{hour12:false});
+  scanLog.push({ts,msg,type});
+  if(scanLog.length>200)scanLog=scanLog.slice(-200);
+  const el=document.getElementById('scanLog');
+  if(el){
+    el.innerHTML=scanLog.slice(-30).map(l=>`<div style="color:${l.type==='error'?'var(--red)':l.type==='warn'?'var(--amber)':l.type==='ok'?'var(--green)':'var(--text2)'}"><span style="color:var(--text2)">[${l.ts}]</span> ${l.msg}</div>`).join('');
+    el.scrollTop=el.scrollHeight;
+  }
+}
+
+// Fetch universe from FMP — tries multiple endpoints
+async function fetchUniverse(){
+  const endpoints=[
+    {name:'v3 stock-screener',url:`https://financialmodelingprep.com/api/v3/stock-screener?exchange=NYSE,NASDAQ&isActivelyTrading=true&priceMoreThan=2&limit=10000&apikey=${FMP_KEY}`},
+    {name:'stable company-screener',url:`https://financialmodelingprep.com/stable/company-screener?exchange=NYSE,NASDAQ&priceMoreThan=2&limit=10000&apikey=${FMP_KEY}`},
+    {name:'stable stock-screener',url:`https://financialmodelingprep.com/stable/stock-screener?exchange=NYSE,NASDAQ&limit=10000&apikey=${FMP_KEY}`}
+  ];
+  for(const ep of endpoints){
+    try{
+      log(`Trying ${ep.name}...`);
+      const res=await fetch(ep.url);
+      if(!res.ok){log(`${ep.name} returned ${res.status}`,'warn');continue}
+      const data=await res.json();
+      if(data&&data['Error Message']){log(`API error: ${data['Error Message']}`,'error');continue}
+      const arr=Array.isArray(data)?data:(data.data||data.results||[]);
+      if(arr.length===0){log(`${ep.name} returned empty`,'warn');continue}
+      log(`${ep.name} OK — ${arr.length} raw stocks`,'ok');
+      const filtered=arr.filter(s=>{
+        const sym=s.symbol||s.ticker||'';
+        const price=s.price||s.lastPrice||0;
+        return price>=2 && sym && !sym.includes('.') && !sym.includes('-') && !sym.includes('/');
+      });
+      // Normalize field names
+      return filtered.map(s=>({
+        symbol:s.symbol||s.ticker,
+        companyName:s.companyName||s.name||'',
+        exchange:s.exchangeShortName||s.exchange||'',
+        exchangeShortName:s.exchangeShortName||s.exchange||'',
+        sector:s.sector||'',
+        industry:s.industry||'Unknown',
+        price:s.price||s.lastPrice||0,
+        marketCap:s.marketCap||0
+      }));
+    }catch(e){log(`${ep.name} failed: ${e.message}`,'error')}
+  }
+  throw new Error('All FMP endpoints failed — check API key, network, or try again');
+}
+
+// Fetch OHLCV
+async function fetchOHLCV(ticker){
+  const url=`https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=${ticker}&apikey=${FMP_KEY}`;
+  const res=await fetch(url);
+  const data=await res.json();
+  const hist=Array.isArray(data)?data:(data.historical||[]);
+  return hist.sort((a,b)=>new Date(a.date)-new Date(b.date));
+}
+
+// Fetch CANSLIM fundamentals — combines income statements, key metrics, earnings calendar
+async function fetchFundamentals(ticker){
+  const out={};
+  try{
+    // Quarterly income statements (last 5 = most recent + 4 quarters ago for YoY comparison)
+    const qRes=await fetch(`https://financialmodelingprep.com/stable/income-statement?symbol=${ticker}&period=quarter&limit=5&apikey=${FMP_KEY}`);
+    const qData=await qRes.json();
+    if(Array.isArray(qData)&&qData.length>=5){
+      const q0=qData[0],q4=qData[4];
+      if(q4.eps&&q4.eps!==0){
+        out.epsGrowthQ=((q0.eps-q4.eps)/Math.abs(q4.eps))*100;
+      }
+      if(q4.revenue&&q4.revenue!==0){
+        out.salesGrowthQ=((q0.revenue-q4.revenue)/Math.abs(q4.revenue))*100;
+      }
+      out.lastEpsDate=q0.date;
+    }
+  }catch(e){}
+  try{
+    // Annual income statements (last 4 years for 3-yr growth)
+    const aRes=await fetch(`https://financialmodelingprep.com/stable/income-statement?symbol=${ticker}&period=annual&limit=4&apikey=${FMP_KEY}`);
+    const aData=await aRes.json();
+    if(Array.isArray(aData)&&aData.length>=4){
+      const a0=aData[0],a3=aData[3];
+      if(a3.eps&&a3.eps>0){
+        // 3yr CAGR
+        out.epsGrowthA=(Math.pow(a0.eps/a3.eps,1/3)-1)*100;
+      }
+    }
+  }catch(e){}
+  try{
+    // Key metrics for institutional ownership, float
+    const kRes=await fetch(`https://financialmodelingprep.com/stable/key-metrics?symbol=${ticker}&period=annual&limit=1&apikey=${FMP_KEY}`);
+    const kData=await kRes.json();
+    if(Array.isArray(kData)&&kData[0]){
+      // FMP doesn't always have institutional %, will use shares float as proxy for S
+    }
+  }catch(e){}
+  try{
+    // Company outlook / profile for institutional ownership
+    const pRes=await fetch(`https://financialmodelingprep.com/stable/profile?symbol=${ticker}&apikey=${FMP_KEY}`);
+    const pData=await pRes.json();
+    if(Array.isArray(pData)&&pData[0]){
+      const p=pData[0];
+      out.float=p.floatShares||p.sharesOutstanding||0;
+      out.floatM=out.float/1000000;
+    }
+  }catch(e){}
+  try{
+    // Institutional ownership
+    const iRes=await fetch(`https://financialmodelingprep.com/stable/institutional-ownership?symbol=${ticker}&apikey=${FMP_KEY}`);
+    const iData=await iRes.json();
+    if(Array.isArray(iData)&&iData[0]){
+      out.instOwn=iData[0].ownershipPercent||iData[0].institutionalOwnershipPercentage||0;
+    }
+  }catch(e){}
+  try{
+    // Next earnings date
+    const eRes=await fetch(`https://financialmodelingprep.com/stable/earnings?symbol=${ticker}&apikey=${FMP_KEY}`);
+    const eData=await eRes.json();
+    if(Array.isArray(eData)){
+      const today=new Date();
+      const upcoming=eData.find(e=>new Date(e.date)>today);
+      if(upcoming){
+        out.nextEarnings=upcoming.date;
+        out.daysToEarnings=Math.ceil((new Date(upcoming.date)-today)/(1000*60*60*24));
+      }
+    }
+  }catch(e){}
+  return out;
+}
+
+// Main scan
+async function runScan(testLimit=0){
+  if(scanRunning)return;
+  scanRunning=true;scanAbort=false;
+  scanLog=[];
+  log(testLimit?`Test scan started (limit ${testLimit})`:'Full scan started');
+  render();
+  try{
+    setProgress('Fetching universe from NYSE + NASDAQ...',0,1,'');
+    let universe;
+    try{
+      universe=await fetchUniverse();
+      log(`Got ${universe.length} stocks after filtering (price ≥ $2)`,'ok');
+    }
+    catch(e){
+      log('FATAL: '+e.message,'error');
+      setProgress('Universe fetch failed — see log below',0,1,'');
+      scanRunning=false;render();return;
+    }
+
+    if(universe.length===0){
+      log('Universe is empty after filtering','error');
+      setProgress('Empty universe — check filters or API',0,1,'');
+      scanRunning=false;render();return;
+    }
+
+    // Test mode: take a random sample
+    if(testLimit>0&&universe.length>testLimit){
+      // Shuffle and take first N for representative sample
+      universe=universe.sort(()=>Math.random()-0.5).slice(0,testLimit);
+      log(`TEST MODE: limited to ${testLimit} random stocks`,'warn');
+    }
+
+    const total=universe.length;
+    scanMeta={lastRun:null,total,processed:0,errors:0};
+    const estMin=Math.round(total/BATCH_SIZE*(BATCH_MS/1000)/60);
+    log(`Universe size: ${total} · Est time: ${estMin} min · Batch size: ${BATCH_SIZE} · Delay: ${BATCH_MS}ms`);
+    setProgress(`Universe: ${total} stocks. Starting OHLCV fetch (~${estMin} min)...`,0,total,'');
+
+    const results=[];
+    for(let i=0;i<universe.length;i+=BATCH_SIZE){
+      if(scanAbort){log('Scan aborted by user','warn');break}
+      const batch=universe.slice(i,i+BATCH_SIZE);
+      const batchResults=await Promise.all(batch.map(async stock=>{
+        try{
+          const hist=await fetchOHLCV(stock.symbol);
+          return processStock(stock.symbol,stock,hist);
+        }catch(e){
+          scanMeta.errors++;
+          if(scanMeta.errors<=10)log(`${stock.symbol}: ${e.message}`,'warn');
+          return null;
+        }
+      }));
+      batchResults.filter(Boolean).forEach(r=>results.push(r));
+      scanMeta.processed=i+batch.length;
+      const pct=Math.round(scanMeta.processed/total*100);
+      const elapsed=(i/BATCH_SIZE+1)*(BATCH_MS/1000);
+      const remaining=Math.round((total-scanMeta.processed)/BATCH_SIZE*(BATCH_MS/1000));
+      const eta=remaining>60?Math.round(remaining/60)+'m ':remaining+'s ';
+      setProgress(
+        `Fetching OHLCV... ${scanMeta.processed}/${total} (${pct}%) — ETA ${eta}`,
+        scanMeta.processed,total,
+        `${results.length} valid · ${scanMeta.errors} errors`
+      );
+      // Log progress milestones
+      if(scanMeta.processed%100===0||scanMeta.processed===total){
+        log(`Progress: ${scanMeta.processed}/${total} · ${results.length} valid · ${scanMeta.errors} errors`);
+      }
+      await sleep(BATCH_MS);
+    }
+
+    log('Calculating RS rankings...','ok');
+    setProgress('Calculating RS rankings across full universe...',total,total,'');
+    calcRS(results);
+    calcIndustryRS(results);
+    scanResults=results;
+    scanMeta.lastRun=new Date().toISOString();
+    saveScreener();
+    const vcpCount=results.filter(r=>r.setup==='VCP').length;
+    const pbCount=results.filter(r=>r.setup==='Pullback').length;
+    log(`Phase 1 complete: ${results.length} ranked · ${vcpCount} VCPs · ${pbCount} Pullbacks`,'ok');
+    
+    // PHASE 2: CANSLIM fundamentals for RS >= 80
+    if(!scanAbort){
+      const candidates=results.filter(r=>r.rsScore>=80);
+      log(`Phase 2 starting: fetching CANSLIM fundamentals for ${candidates.length} stocks (RS ≥ 80)`,'ok');
+      const fundMin=Math.round(candidates.length/BATCH_SIZE*(BATCH_MS/1000)/60);
+      setProgress(`Phase 2: Fetching fundamentals for ${candidates.length} stocks (~${fundMin} min)...`,0,candidates.length,'');
+      
+      let fundProcessed=0;let fundErrors=0;
+      for(let i=0;i<candidates.length;i+=BATCH_SIZE){
+        if(scanAbort){log('Phase 2 aborted','warn');break}
+        const batch=candidates.slice(i,i+BATCH_SIZE);
+        await Promise.all(batch.map(async stock=>{
+          try{
+            const fund=await fetchFundamentals(stock.ticker);
+            Object.assign(stock,fund);
+          }catch(e){
+            fundErrors++;
+            if(fundErrors<=10)log(`Fund ${stock.ticker}: ${e.message}`,'warn');
+          }
+        }));
+        fundProcessed=i+batch.length;
+        const pct=Math.round(fundProcessed/candidates.length*100);
+        const remaining=Math.round((candidates.length-fundProcessed)/BATCH_SIZE*(BATCH_MS/1000));
+        const eta=remaining>60?Math.round(remaining/60)+'m ':remaining+'s ';
+        setProgress(
+          `Phase 2: ${fundProcessed}/${candidates.length} (${pct}%) — ETA ${eta}`,
+          fundProcessed,candidates.length,
+          `${fundErrors} errors`
+        );
+        if(fundProcessed%50===0||fundProcessed===candidates.length){
+          log(`Fundamentals: ${fundProcessed}/${candidates.length} · ${fundErrors} errors`);
+        }
+        await sleep(BATCH_MS);
+      }
+      saveScreener();
+      const withFund=results.filter(r=>r.epsGrowthQ!=null).length;
+      log(`COMPLETE: ${withFund} stocks have CANSLIM data`,'ok');
+      setProgress(`All complete. ${results.length} ranked · ${withFund} with fundamentals.`,1,1,'');
+    }
+  }catch(e){
+    log('Scan error: '+e.message,'error');
+    setProgress('Scan error: '+e.message,0,1,'');
+  }
+  scanRunning=false;
+  render();
+}
+
+function setProgress(msg,current,total,sub){
+  const el=document.getElementById('scanProg');
+  if(!el)return;
+  const pct=total>0?Math.round(current/total*100):0;
+  el.innerHTML=`<div class="prog-label">${msg}</div>
+<div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+${sub?`<div class="prog-stats"><div class="prog-stat">${sub}</div></div>`:''}`;
+}
+
+// Filtered and sorted results
+function getFiltered(){
+  let d=scanResults.slice();
+  if(screenerFilter.minRS)d=d.filter(r=>r.rsScore>=screenerFilter.minRS);
+  if(screenerFilter.minIndRS)d=d.filter(r=>r.industryRS>=screenerFilter.minIndRS);
+  if(screenerFilter.setup!=='all')d=d.filter(r=>r.setup===screenerFilter.setup);
+  if(screenerFilter.trendOnly)d=d.filter(r=>r.trendValid);
+  if(screenerFilter.minPrice>0)d=d.filter(r=>r.price>=screenerFilter.minPrice);
+  if(screenerFilter.maxPrice>0)d=d.filter(r=>r.price<=screenerFilter.maxPrice);
+  if(screenerFilter.minMcap>0)d=d.filter(r=>(r.marketCap||0)>=screenerFilter.minMcap*1e6);
+  // CANSLIM — stocks missing data fail filters when threshold > 0
+  if(screenerFilter.canslim){
+    if(screenerFilter.minEpsGrowthQ)d=d.filter(r=>r.epsGrowthQ!=null&&r.epsGrowthQ>=screenerFilter.minEpsGrowthQ);
+    if(screenerFilter.minEpsGrowthA)d=d.filter(r=>r.epsGrowthA!=null&&r.epsGrowthA>=screenerFilter.minEpsGrowthA);
+    if(screenerFilter.maxFromHigh)d=d.filter(r=>r.pct50H!=null&&Math.abs(r.pct50H)<=screenerFilter.maxFromHigh);
+    if(screenerFilter.maxFloatM)d=d.filter(r=>r.floatM!=null&&r.floatM>0&&r.floatM<=screenerFilter.maxFloatM);
+    if(screenerFilter.minInstOwn)d=d.filter(r=>r.instOwn!=null&&r.instOwn>=screenerFilter.minInstOwn);
+    if(screenerFilter.minDaysToEarnings)d=d.filter(r=>r.daysToEarnings!=null&&r.daysToEarnings>=screenerFilter.minDaysToEarnings);
+  }
+  // Sub-tab filter
+  if(screenerSubTab==='setups')d=d.filter(r=>r.setup!=='None');
+  else if(screenerSubTab==='vcp')d=d.filter(r=>r.setup==='VCP');
+  else if(screenerSubTab==='pullback')d=d.filter(r=>r.setup==='Pullback');
+  // Sort
+  d.sort((a,b)=>{
+    const av=a[sortCol]||0,bv=b[sortCol]||0;
+    return sortDir==='desc'?bv-av:av-bv;
+  });
+  return d;
+}
+
+function rsColor(n){return n>=70?'rs-hi':n>=40?'rs-mid':'rs-lo'}
+function setupBadge(s){
+  if(s==='VCP')return'<span class="badge badge-blue">VCP</span>';
+  if(s==='Pullback')return'<span class="badge badge-green">Pullback</span>';
+  return'<span class="badge badge-grey">—</span>';
+}
+function sortTh(col,label){
+  const arrow=sortCol===col?(sortDir==='desc'?'↓':'↑'):'';
+  return`<th onclick="setSort('${col}')">${label}${arrow}</th>`;
+}
+
+// Render functions
+function render(){
+  const c=document.getElementById('content');
+  updateHeaderMeta();
+  switch(currentTab){
+    case'screener':c.innerHTML=renderScreener();break;
+    case'industry':c.innerHTML=renderIndustry();break;
+    case'journal':c.innerHTML=renderJournal();break;
+    case'stats':c.innerHTML=renderStats();break;
+  }
+}
+
+function updateHeaderMeta(){
+  const el=document.getElementById('headerMeta');
+  if(!el)return;
+  if(scanMeta.lastRun){
+    const d=new Date(scanMeta.lastRun);
+    el.innerHTML=`Last scan: ${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})} ${d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}<br>${scanMeta.total} stocks scanned · ${scanResults.length} valid`;
+  }
+}
+
+function renderScreener(){
+  const filtered=getFiltered();
+  const vcps=scanResults.filter(r=>r.setup==='VCP');
+  const pbs=scanResults.filter(r=>r.setup==='Pullback');
+  const trended=scanResults.filter(r=>r.trendValid);
+
+  return`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+<div style="display:flex;gap:8px;align-items:center">
+<button class="btn btn-green" onclick="runScan()" ${scanRunning?'disabled':''}>
+${scanRunning?'⟳ Scanning...':'▶ Run Full Scan'}</button>
+<button class="btn" onclick="runScan(500)" ${scanRunning?'disabled':''} title="Quick test on 500 random stocks (~2-3 min)">
+🧪 Test (500)</button>
+${scanRunning?`<button class="btn btn-red" onclick="scanAbort=true">■ Stop</button>`:''}
+${scanResults.length>0&&!scanRunning?`<button class="btn" onclick="exportCSV()">⬇ CSV for Claude</button>`:''}
+</div>
+<div style="font-size:10px;color:var(--text2)">${scanResults.length>0?`${scanResults.length} stocks · ${vcps.length} VCPs · ${pbs.length} Pullbacks · ${trended.length} trending`:scanRunning?'Scan in progress...':'No data — run scan'}</div>
+</div>
+
+<div id="scanProg" style="${scanRunning||scanMeta.processed>0?'':'display:none'}"></div>
+
+${scanRunning||scanLog.length>0?`
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-bottom:16px;overflow:hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg3)">
+<div style="font-size:9px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase">Scan Log</div>
+<button class="btn btn-sm" onclick="scanLog=[];render()">Clear</button>
+</div>
+<div id="scanLog" style="max-height:200px;overflow-y:auto;padding:10px 14px;font-size:10px;font-family:var(--mono);line-height:1.6">${scanLog.slice(-30).map(l=>`<div style="color:${l.type==='error'?'var(--red)':l.type==='warn'?'var(--amber)':l.type==='ok'?'var(--green)':'var(--text2)'}"><span style="color:var(--text2)">[${l.ts}]</span> ${l.msg}</div>`).join('')||'<div style="color:var(--text2)">Waiting for scan...</div>'}</div>
+</div>`:''}
+
+<div class="filter-bar">
+<div class="filter-group"><label>Min RS</label><input type="number" value="${screenerFilter.minRS}" min="0" max="100" onchange="screenerFilter.minRS=+this.value;render()"></div>
+<div class="filter-group"><label>Min Ind RS</label><input type="number" value="${screenerFilter.minIndRS}" min="0" max="100" onchange="screenerFilter.minIndRS=+this.value;render()"></div>
+<div class="filter-group"><label>Setup</label>
+<select onchange="screenerFilter.setup=this.value;render()">
+<option value="all" ${screenerFilter.setup==='all'?'selected':''}>All</option>
+<option value="VCP" ${screenerFilter.setup==='VCP'?'selected':''}>VCP</option>
+<option value="Pullback" ${screenerFilter.setup==='Pullback'?'selected':''}>Pullback</option>
+<option value="None" ${screenerFilter.setup==='None'?'selected':''}>None</option>
+</select></div>
+<div class="filter-group"><label>Min Price $</label><input type="number" value="${screenerFilter.minPrice}" onchange="screenerFilter.minPrice=+this.value;render()"></div>
+<div class="filter-group"><label>Max Price $</label><input type="number" value="${screenerFilter.maxPrice}" placeholder="0=any" onchange="screenerFilter.maxPrice=+this.value;render()"></div>
+<div class="filter-group"><label>Min Mcap $M</label><input type="number" value="${screenerFilter.minMcap}" placeholder="0=any" onchange="screenerFilter.minMcap=+this.value;render()"></div>
+<div class="filter-group"><label><input type="checkbox" ${screenerFilter.trendOnly?'checked':''} onchange="screenerFilter.trendOnly=this.checked;render()"> Trend Only</label></div>
+</div>
+
+<div class="filter-bar" style="background:${screenerFilter.canslim?'rgba(0,200,150,.05)':'var(--bg2)'};border-color:${screenerFilter.canslim?'var(--green)':'var(--border)'}">
+<div class="filter-group"><label style="color:${screenerFilter.canslim?'var(--green)':'var(--text2)'};font-weight:600">CANSLIM <input type="checkbox" ${screenerFilter.canslim?'checked':''} onchange="screenerFilter.canslim=this.checked;render()"></label></div>
+<div class="filter-group"><label>C: EPS Q YoY %</label><input type="number" value="${screenerFilter.minEpsGrowthQ}" placeholder="25" onchange="screenerFilter.minEpsGrowthQ=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
+<div class="filter-group"><label>A: EPS 3yr CAGR %</label><input type="number" value="${screenerFilter.minEpsGrowthA}" placeholder="25" onchange="screenerFilter.minEpsGrowthA=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
+<div class="filter-group"><label>N: Max % from High</label><input type="number" value="${screenerFilter.maxFromHigh}" placeholder="15" onchange="screenerFilter.maxFromHigh=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
+<div class="filter-group"><label>S: Max Float (M)</label><input type="number" value="${screenerFilter.maxFloatM}" placeholder="0=any" onchange="screenerFilter.maxFloatM=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
+<div class="filter-group"><label>I: Min Inst Own %</label><input type="number" value="${screenerFilter.minInstOwn}" placeholder="0=any" onchange="screenerFilter.minInstOwn=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
+<div class="filter-group"><label>Earn buffer (days)</label><input type="number" value="${screenerFilter.minDaysToEarnings}" placeholder="5" onchange="screenerFilter.minDaysToEarnings=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
+</div>
+
+<div class="sub-tabs">
+${[['setups','Setups ('+filtered.filter(r=>r.setup!=='None').length+')'],['vcp','VCP'],['pullback','Pullback'],['all','All Filtered']].map(([k,l])=>`<div class="sub-tab ${screenerSubTab===k?'active':''}" onclick="screenerSubTab='${k}';render()">${l}</div>`).join('')}
+</div>
+
+${scanResults.length===0&&!scanRunning?'<div class="empty">Click Run Full Scan to fetch and rank all NYSE + NASDAQ stocks.<br>Estimated time: 15-25 minutes. Leave running in background.</div>':
+filtered.length===0?'<div class="empty">No results matching filters</div>':`
+<div class="table-wrap"><table>
+<tr>
+${sortTh('ticker','Ticker')}
+<th>Name</th>
+<th>Ind</th>
+${sortTh('rsScore','RS')}
+${sortTh('industryRS','Ind RS')}
+${sortTh('trendScore','Trend')}
+<th>Setup</th>
+${sortTh('rsiVal','RSI')}
+${sortTh('ret1m','1M')}
+${sortTh('ret3m','3M')}
+${sortTh('ret12m','12M')}
+${sortTh('price','Price')}
+${screenerFilter.canslim?`${sortTh('epsGrowthQ','EPS Q')}${sortTh('epsGrowthA','EPS 3yr')}${sortTh('pct50H','%Hi')}${sortTh('floatM','Float M')}${sortTh('instOwn','Inst%')}${sortTh('daysToEarnings','Earn')}`:''}
+</tr>
+${filtered.slice(0,500).map(r=>`<tr>
+<td class="ticker-cell">${r.ticker}</td>
+<td class="name-cell">${r.name}</td>
+<td style="font-size:10px;color:var(--text2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.industry}">${r.industry}</td>
+<td><span class="${rsColor(r.rsScore)}">${r.rsScore}</span></td>
+<td><span class="${rsColor(r.industryRS)}">${r.industryRS}</span></td>
+<td><span style="color:${r.trendValid?'var(--green)':'var(--text2)'}">${r.trendScore}/10</span></td>
+<td>${setupBadge(r.setup)}</td>
+<td style="color:${r.rsiVal>70?'var(--red)':r.rsiVal<30?'var(--green)':'var(--text)'}">${r.rsiVal.toFixed(0)}</td>
+<td style="color:${r.ret1m>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmtPct(r.ret1m)}</td>
+<td style="color:${r.ret3m>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmtPct(r.ret3m)}</td>
+<td style="color:${r.ret12m>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmtPct(r.ret12m)}</td>
+<td style="color:var(--white)">$${fmt(r.price,2)}</td>
+${screenerFilter.canslim?`
+<td style="color:${(r.epsGrowthQ||0)>=25?'var(--green)':(r.epsGrowthQ||0)>=0?'var(--text)':'var(--red)'}">${r.epsGrowthQ!=null?fmtPct(r.epsGrowthQ):'<span style="color:var(--text2)">—</span>'}</td>
+<td style="color:${(r.epsGrowthA||0)>=25?'var(--green)':(r.epsGrowthA||0)>=0?'var(--text)':'var(--red)'}">${r.epsGrowthA!=null?fmtPct(r.epsGrowthA):'<span style="color:var(--text2)">—</span>'}</td>
+<td style="color:${Math.abs(r.pct50H||0)<=5?'var(--green)':Math.abs(r.pct50H||0)<=15?'var(--amber)':'var(--text)'}">${r.pct50H!=null?fmtPct(r.pct50H):'<span style="color:var(--text2)">—</span>'}</td>
+<td>${r.floatM?fmt(r.floatM,0)+'M':'<span style="color:var(--text2)">—</span>'}</td>
+<td style="color:${(r.instOwn||0)>=50?'var(--green)':(r.instOwn||0)>=20?'var(--amber)':'var(--text)'}">${r.instOwn!=null?fmt(r.instOwn,0)+'%':'<span style="color:var(--text2)">—</span>'}</td>
+<td style="color:${r.daysToEarnings&&r.daysToEarnings<=5?'var(--red)':'var(--text)'}">${r.daysToEarnings||'<span style="color:var(--text2)">—</span>'}</td>
+`:''}
+</tr>`).join('')}
+</table></div>
+${filtered.length>500?`<div style="text-align:center;padding:10px;font-size:10px;color:var(--text2)">Showing top 500 of ${filtered.length} — tighten filters to see more</div>`:''}
+`}`;
+}
+
+function renderIndustry(){
+  if(scanResults.length===0)return'<div class="empty">Run scan first</div>';
+  // Group by industry, sort by industryRS desc
+  const map={};
+  scanResults.forEach(r=>{
+    if(!map[r.industry])map[r.industry]={industry:r.industry,sector:r.sector,indRS:r.industryRS,stocks:[]};
+    map[r.industry].stocks.push(r);
+  });
+  const industries=Object.values(map).sort((a,b)=>b.indRS-a.indRS);
+
+  return`<div style="margin-bottom:12px;font-size:10px;color:var(--text2)">${industries.length} industries ranked by median RS of constituent stocks</div>
+<div class="industry-grid">
+${industries.map(ind=>{
+  const vcps=ind.stocks.filter(s=>s.setup==='VCP').length;
+  const pbs=ind.stocks.filter(s=>s.setup==='Pullback').length;
+  const top3=ind.stocks.sort((a,b)=>b.rsScore-a.rsScore).slice(0,3);
+  const isOpen=industryExpanded[ind.industry];
+  return`<div class="industry-row">
+<div class="industry-head" onclick="industryExpanded['${ind.industry}']=!industryExpanded['${ind.industry}'];render()">
+<div>
+<span class="industry-name">${ind.industry}</span>
+<span style="font-size:10px;color:var(--text2);margin-left:8px">${ind.sector}</span>
+</div>
+<div class="industry-meta">
+<span>Ind RS: <strong style="color:${rsColor(ind.indRS).replace('rs-hi','var(--green)').replace('rs-mid','var(--amber)').replace('rs-lo','var(--red)')}">${ind.indRS}</strong></span>
+<span>${ind.stocks.length} stocks</span>
+${vcps>0?`<span style="color:var(--blue)">${vcps} VCP</span>`:''}
+${pbs>0?`<span style="color:var(--green)">${pbs} PB</span>`:''}
+<span style="color:var(--text2)">${isOpen?'▲':'▼'}</span>
+</div>
+</div>
+${isOpen?`<div class="industry-body open">
+<div style="font-size:10px;color:var(--text2);margin-bottom:6px">Top 3: ${top3.map(s=>`<strong style="color:var(--white)">${s.ticker}</strong> (RS ${s.rsScore})`).join(' · ')}</div>
+<div class="table-wrap"><table>
+<tr><th>Ticker</th><th>Name</th><th>RS</th><th>Trend</th><th>Setup</th><th>RSI</th><th>12M</th><th>Price</th></tr>
+${ind.stocks.sort((a,b)=>b.rsScore-a.rsScore).slice(0,20).map(r=>`<tr>
+<td class="ticker-cell">${r.ticker}</td>
+<td class="name-cell">${r.name}</td>
+<td><span class="${rsColor(r.rsScore)}">${r.rsScore}</span></td>
+<td style="color:${r.trendValid?'var(--green)':'var(--text2)'}">${r.trendScore}/10</td>
+<td>${setupBadge(r.setup)}</td>
+<td>${r.rsiVal.toFixed(0)}</td>
+<td style="color:${r.ret12m>=0?'var(--green)':'var(--red)'}">${fmtPct(r.ret12m)}</td>
+<td>$${fmt(r.price,2)}</td>
+</tr>`).join('')}
+</table></div>
+${ind.stocks.length>20?`<div style="font-size:10px;color:var(--text2);padding:8px">+${ind.stocks.length-20} more stocks in this industry</div>`:''}
+</div>`:''}`}).join('')}
+</div>`;
+}
+
+function renderJournal(){
+  const open=journalData.trades.filter(t=>t.status==='open');
+  const closed=journalData.trades.filter(t=>t.status==='closed');
+  return`
+<div class="form-section">
+<div style="font-size:10px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px">Log Trade</div>
+<div class="form-grid">
+<div class="field" style="grid-column:span 2"><label>Ticker</label><input type="text" id="f_ticker" placeholder="e.g. NVDA, AAPL, TSLA" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+<div class="field" style="grid-column:span 2"><label>Company Name</label><input type="text" id="f_name" placeholder="Optional"></div>
+<div class="field"><label>Exchange</label>
+<select id="f_exch"><option value="NASDAQ">NASDAQ</option><option value="NYSE">NYSE</option></select></div>
+<div class="field"><label>Direction</label>
+<select id="f_dir"><option value="LONG">LONG</option><option value="SHORT">SHORT</option></select></div>
+<div class="field"><label>Entry Price $</label><input type="number" id="f_entry" step="any"></div>
+<div class="field"><label>Stop Loss $</label><input type="number" id="f_stop" step="any"></div>
+<div class="field"><label>Shares</label><input type="number" id="f_shares" step="any"></div>
+<div class="field"><label>Risk $ (optional)</label><input type="number" id="f_risk" step="any" placeholder="Auto from above"></div>
+<div class="field"><label>Date</label><input type="date" id="f_date" value="${new Date().toISOString().slice(0,10)}"></div>
+<div class="field" style="grid-column:span 3"><label>Thesis</label><input type="text" id="f_thesis" placeholder="Why are you in this trade?"></div>
+</div>
+<button class="btn btn-green" onclick="addTrade()">Log Trade</button>
+</div>
+
+${open.length>0?`
+<div class="section-head">Open Positions (${open.length})</div>
+<div class="table-wrap"><table>
+<tr><th>Date</th><th>Ticker</th><th>Name</th><th>Dir</th><th>Entry</th><th>Stop</th><th>Shares</th><th>Risk $</th><th>Thesis</th><th>Float P&L</th><th></th></tr>
+${open.map(t=>`<tr>
+<td style="color:var(--text2)">${t.date}</td>
+<td class="ticker-cell">${t.ticker}</td>
+<td class="name-cell">${t.name||''}</td>
+<td style="color:${t.direction==='LONG'?'var(--green)':'var(--red)'}; font-weight:600">${t.direction}</td>
+<td>$${fmt(t.entry)}</td>
+<td>$${fmt(t.stop)}</td>
+<td>${t.shares}</td>
+<td style="color:var(--text2)">$${fmt(t.riskAmt||0,0)}</td>
+<td class="name-cell">${t.thesis||''}</td>
+<td><input type="number" value="${t.floatPnl||0}" style="width:80px;padding:4px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--white);font-family:var(--mono);font-size:11px" onchange="updateFloat('${t.id}',this.value)"></td>
+<td><button class="btn btn-sm" onclick="closeTrade('${t.id}')">Close</button></td>
+</tr>`).join('')}
+</table></div>`:''}
+
+${closed.length>0?`
+<div class="section-head">Closed Trades (${closed.length})</div>
+<div class="table-wrap"><table>
+<tr><th>Date</th><th>Ticker</th><th>Name</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Shares</th><th>P&L $</th><th>R</th><th>Thesis</th></tr>
+${closed.slice().reverse().map(t=>{
+const r=t.riskAmt?((t.pnl||0)/t.riskAmt):0;
+return`<tr>
+<td style="color:var(--text2)">${t.closeDate||t.date}</td>
+<td class="ticker-cell">${t.ticker}</td>
+<td class="name-cell">${t.name||''}</td>
+<td style="color:${t.direction==='LONG'?'var(--green)':'var(--red)'}">${t.direction}</td>
+<td>$${fmt(t.entry)}</td>
+<td>$${fmt(t.exitPrice||0)}</td>
+<td>${t.shares}</td>
+<td style="color:${(t.pnl||0)>=0?'var(--green)':'var(--red)'}; font-weight:700">${(t.pnl||0)>=0?'+':''}$${fmt(t.pnl||0,0)}</td>
+<td style="color:${r>=1?'var(--green)':r>=0?'var(--amber)':'var(--red)'}">${r>=0?'+':''}${r.toFixed(1)}R</td>
+<td class="name-cell">${t.thesis||''}</td>
+</tr>`}).join('')}
+</table></div>`:''}`;
+}
+
+function renderStats(){
+  const closed=journalData.trades.filter(t=>t.status==='closed');
+  const open=journalData.trades.filter(t=>t.status==='open');
+  if(closed.length===0)return'<div class="empty">No closed trades yet</div>';
+  const wins=closed.filter(t=>(t.pnl||0)>0);
+  const losses=closed.filter(t=>(t.pnl||0)<0);
+  const totalPnl=closed.reduce((s,t)=>s+(t.pnl||0),0);
+  const floatPnl=open.reduce((s,t)=>s+(t.floatPnl||0),0);
+  const avgWin=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+  const avgLoss=losses.length?losses.reduce((s,t)=>s+t.pnl,0)/losses.length:0;
+  const winRate=closed.length?wins.length/closed.length*100:0;
+  const expectancy=closed.length?totalPnl/closed.length:0;
+  const profitFactor=losses.length&&wins.length?Math.abs(wins.reduce((s,t)=>s+t.pnl,0)/losses.reduce((s,t)=>s+t.pnl,0)):0;
+  const rs=closed.map(t=>t.riskAmt?t.pnl/t.riskAmt:0);
+  const bestR=rs.length?Math.max(...rs):0;
+  const worstR=rs.length?Math.min(...rs):0;
+
+  // P&L curve
+  let running=0;const pts=[0];
+  closed.sort((a,b)=>new Date(a.closeDate)-new Date(b.closeDate)).forEach(t=>{running+=(t.pnl||0);pts.push(running)});
+  const maxP=Math.max(...pts,1);const minP=Math.min(...pts,-1);
+  const range=maxP-minP||1;const W=600;const H=120;
+  const stepX=W/(pts.length-1||1);
+  const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${i*stepX},${H-((p-minP)/range)*H}`).join(' ');
+  const zeroY=H-((0-minP)/range)*H;
+
+  return`<div class="stats-grid">
+<div class="stat"><div class="lbl">Realized P&L</div><div class="val" style="color:${totalPnl>=0?'var(--green)':'var(--red)'}">${totalPnl>=0?'+':''}$${fmt(totalPnl,0)}</div></div>
+<div class="stat"><div class="lbl">Floating P&L</div><div class="val" style="color:${floatPnl>=0?'var(--green)':'var(--red)'}">${floatPnl>=0?'+':''}$${fmt(floatPnl,0)}</div></div>
+<div class="stat"><div class="lbl">Trades</div><div class="val">${closed.length}</div></div>
+<div class="stat"><div class="lbl">Win Rate</div><div class="val" style="color:${winRate>=50?'var(--green)':'var(--red)'}">${winRate.toFixed(0)}%</div></div>
+<div class="stat"><div class="lbl">Avg Win</div><div class="val" style="color:var(--green)">+$${fmt(avgWin,0)}</div></div>
+<div class="stat"><div class="lbl">Avg Loss</div><div class="val" style="color:var(--red)">$${fmt(avgLoss,0)}</div></div>
+<div class="stat"><div class="lbl">Expectancy</div><div class="val" style="color:${expectancy>=0?'var(--green)':'var(--red)'}">${expectancy>=0?'+':''}$${fmt(expectancy,0)}</div></div>
+<div class="stat"><div class="lbl">Profit Factor</div><div class="val" style="color:${profitFactor>=1.5?'var(--green)':profitFactor>=1?'var(--amber)':'var(--red)'}">${profitFactor.toFixed(2)}</div></div>
+<div class="stat"><div class="lbl">Best Trade</div><div class="val" style="color:var(--green)">+${bestR.toFixed(1)}R</div></div>
+<div class="stat"><div class="lbl">Worst Trade</div><div class="val" style="color:var(--red)">${worstR.toFixed(1)}R</div></div>
+</div>
+<div class="curve"><h4>P&L Curve</h4>
+<svg viewBox="0 0 ${W} ${H+16}" style="width:100%;height:auto">
+<line x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}" stroke="var(--border)" stroke-width="1"/>
+<path d="${pathD}" fill="none" stroke="${running>=0?'var(--green)':'var(--red)'}" stroke-width="2"/>
+<text x="4" y="${zeroY-4}" fill="var(--text2)" font-size="9" font-family="var(--mono)">$0</text>
+<text x="${W-4}" y="${H+12}" fill="var(--text2)" font-size="9" font-family="var(--mono)" text-anchor="end">${running>=0?'+':''}$${fmt(running,0)}</text>
+</svg></div>`;
+}
+
+// Journal actions
+function addTrade(){
+  const ticker=(document.getElementById('f_ticker').value||'').trim().toUpperCase();
+  if(!ticker){alert('Ticker required');return}
+  const entry=parseFloat(document.getElementById('f_entry').value);
+  const stop=parseFloat(document.getElementById('f_stop').value);
+  const shares=parseFloat(document.getElementById('f_shares').value)||0;
+  const manualRisk=parseFloat(document.getElementById('f_risk').value)||0;
+  const riskAmt=manualRisk||(shares&&entry&&stop?Math.abs((entry-stop)*shares):0);
+  const trade={
+    id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    ticker,
+    name:document.getElementById('f_name').value,
+    exchange:document.getElementById('f_exch').value,
+    direction:document.getElementById('f_dir').value,
+    entry,stop,shares,riskAmt,
+    thesis:document.getElementById('f_thesis').value,
+    date:document.getElementById('f_date').value,
+    status:'open',floatPnl:0
+  };
+  journalData.trades.push(trade);saveJournal();render();
+}
+
+function updateFloat(id,val){
+  const t=journalData.trades.find(t=>t.id===id);
+  if(t){t.floatPnl=parseFloat(val)||0;saveJournal()}
+}
+
+function closeTrade(id){
+  const t=journalData.trades.find(t=>t.id===id);
+  if(!t)return;
+  const pnlStr=prompt(`Close ${t.ticker}\nEnter realized P&L ($):`);
+  if(pnlStr===null)return;
+  const exitStr=prompt('Exit price:');
+  t.status='closed';
+  t.pnl=parseFloat(pnlStr)||0;
+  t.exitPrice=parseFloat(exitStr)||0;
+  t.closeDate=new Date().toISOString().slice(0,10);
+  t.floatPnl=0;
+  saveJournal();render();
+}
+
+// CSV export — ticker, exchange, TVSymbol, sector, industry, RS, IndRS, setup, CANSLIM data
+function exportCSV(){
+  const filtered=getFiltered().filter(r=>r.setup!=='None');
+  const lines=['# VELOX EQUITY SCREENER EXPORT'];
+  lines.push(`# Date: ${new Date().toLocaleDateString('en-GB')}`);
+  lines.push(`# Universe: ${scanResults.length} stocks | Showing: ${filtered.length} setups`);
+  lines.push(`# CANSLIM filters: ${screenerFilter.canslim?'ON':'OFF'}`);
+  lines.push('#');
+  lines.push('# INSTRUCTIONS FOR CLAUDE');
+  lines.push('# 1. Use TradingView MCP to pull daily + weekly chart for each TVSymbol');
+  lines.push('# 2. Rate each setup A/B/C tier based on YOUR chart analysis only');
+  lines.push('# 3. DO NOT rely on screener data for price levels — use live TradingView data');
+  lines.push('# 4. Note industry RS — stocks in high RS industries with high stock RS are highest priority');
+  lines.push('# 5. CANSLIM context: EpsQ = Quarterly EPS YoY%, EpsA = 3yr CAGR%, FromHigh = % from 50d high, Float in millions, Inst = institutional ownership %, DaysToEarn = days until next earnings');
+  lines.push('# 6. Generate a watchlist of your top picks with entry, stop, and thesis');
+  lines.push('#');
+  lines.push('Ticker,Exchange,TVSymbol,Sector,Industry,StockRS,IndustryRS,TrendScore,Setup,EpsQ%,EpsA%,FromHigh%,FloatM,Inst%,DaysToEarn');
+  filtered.forEach(r=>{
+    const exch=r.exchange||'NASDAQ';
+    lines.push([
+      r.ticker,exch,`${exch}:${r.ticker}`,
+      `"${r.sector}"`,`"${r.industry}"`,
+      r.rsScore,r.industryRS,r.trendScore,r.setup,
+      r.epsGrowthQ!=null?r.epsGrowthQ.toFixed(1):'',
+      r.epsGrowthA!=null?r.epsGrowthA.toFixed(1):'',
+      r.pct50H!=null?r.pct50H.toFixed(1):'',
+      r.floatM!=null?r.floatM.toFixed(0):'',
+      r.instOwn!=null?r.instOwn.toFixed(0):'',
+      r.daysToEarnings||''
+    ].join(','));
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`velox_equity_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// Sort
+function setSort(col){
+  if(sortCol===col)sortDir=sortDir==='desc'?'asc':'desc';
+  else{sortCol=col;sortDir='desc'}
+  render();
+}
+
+// Tab handling
+document.getElementById('tabs').addEventListener('click',e=>{
+  if(e.target.classList.contains('tab')){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    e.target.classList.add('active');
+    currentTab=e.target.dataset.tab;
+    render();
+  }
+});
+
+render();
+
+if('serviceWorker' in navigator){
+  const sw=`const C='velox-equity-v1';
+self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll([self.location.pathname])).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const clone=res.clone();caches.open(C).then(c=>c.put(e.request,clone));return res;}).catch(()=>caches.match(self.location.pathname)))));`;
+  const blob=new Blob([sw],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'}).catch(()=>{});
+}
+</script>
+</body>
+</html>

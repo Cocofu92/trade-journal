@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Velox Finance">
+<meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Velox%20Finance%22,%22short_name%22:%22VeloxFi%22,%22start_url%22:%22velox_finance.html%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f1117%22,%22theme_color%22:%22%237c6ee6%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20512%20512'%3E%3Crect%20width%3D'512'%20height%3D'512'%20rx%3D'80'%20fill%3D'%230f1117'%2F%3E%3Ctext%20x%3D'256'%20y%3D'340'%20font-size%3D'280'%20text-anchor%3D'middle'%20fill%3D'%237c6ee6'%20font-family%3D'serif'%3EV%3C%2Ftext%3E%3C%2Fsvg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22any%20maskable%22}]}">
+<title>Velox Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1117;--bg2:#161a27;--bg3:#1e2235;--bg4:#252a42;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --text:#bfc5d4;--text2:#6b7592;--white:#edf0f8;
+  --green:#3dd68c;--red:#f06b7a;--amber:#f0a040;
+  --blue:#5b9cf6;--purple:#7c6ee6;--purple2:#a29bfe;
+  --sans:'Manrope',sans-serif;--serif:'DM Serif Display',serif;
+  --sw:220px;--th:58px
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
+::selection{background:var(--purple);color:#fff}
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sw);min-width:var(--sw);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+.sb-brand{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+.sb-brand h1{font-family:var(--serif);font-size:22px;color:var(--white)}
+.sb-brand .sub{font-size:10px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+.sb-nav{padding:12px 10px;flex:1;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:600;transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+.nav-item:hover{background:var(--bg3);color:var(--white)}
+.nav-item.active{background:rgba(124,110,230,.15);color:var(--purple2);border-color:rgba(124,110,230,.2)}
+.nav-icon{width:16px;height:16px;flex-shrink:0}
+.sb-foot{padding:16px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:2}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:var(--th);min-height:var(--th);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.tb-title{font-size:20px;font-weight:800;color:var(--white);letter-spacing:-.3px}
+.tb-date{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--text)}
+.content{flex:1;overflow-y:auto;padding:28px;background:var(--bg)}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:4px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px 24px;transition:all .2s;position:relative;overflow:hidden}
+.kpi:hover{border-color:var(--border2);transform:translateY(-2px)}
+.kpi .accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+.kpi .lbl{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
+.kpi .val{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:var(--white)}
+.kpi .sub{font-size:12px;color:var(--text2);margin-top:8px;font-weight:500}
+.ring-row{display:flex;align-items:center;gap:16px}
+
+/* ACCOUNTS */
+.ag{margin-bottom:28px}
+.ag-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ag-dot{width:10px;height:10px;border-radius:50%}
+.ag-title{font-size:14px;font-weight:700;color:var(--white)}
+.ag-total{font-size:14px;color:var(--text2);font-weight:600;margin-left:auto}
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.ac{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;transition:all .2s;position:relative;overflow:hidden}
+.ac:hover{border-color:var(--border2);transform:translateY(-2px)}
+.ac .top-bar{height:3px;position:absolute;top:0;left:0;right:0;border-radius:16px 16px 0 0}
+.ac-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.ac-name{font-size:16px;font-weight:700;color:var(--white)}
+.ac-type{font-size:11px;color:var(--text2);margin-top:3px;font-weight:600;text-transform:capitalize}
+.chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700}
+.ac-bal{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:8px}
+.ac-meta{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:18px;min-height:18px}
+.ac-line{height:1px;background:var(--border);margin-bottom:18px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--border2);border-radius:8px;background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.btn:hover{background:var(--bg4);color:var(--white)}
+.btn-g{background:rgba(61,214,140,.1);border-color:rgba(61,214,140,.3);color:var(--green)}
+.btn-r{border-color:rgba(240,107,122,.3);color:var(--red)}
+
+/* AI ANALYSE */
+.ai-panel{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.ai-panel h4{font-size:15px;font-weight:700;color:var(--white);margin-bottom:6px}
+.ai-panel .sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6}
+.ai-response{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;min-height:100px;margin-top:16px;display:none}
+.ai-response.show{display:block}
+.ai-response h3{color:var(--white);font-size:15px;font-weight:700;margin:16px 0 8px}
+.ai-response h3:first-child{margin-top:0}
+.ai-response strong{color:var(--white)}
+.ai-streaming::after{content:'▌';animation:blink .7s infinite;color:var(--purple2)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.ai-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--sans);border:none}
+.ai-btn-primary{background:var(--purple);color:#fff}
+.ai-btn-primary:hover{background:#6558d0}
+.ai-btn-primary:disabled{opacity:.5;cursor:not-allowed}
+
+/* STATEMENT PARSER */
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:20px}
+.upload-zone:hover{border-color:var(--purple2);background:rgba(162,155,254,.04)}
+.upload-zone.drag-over{border-color:var(--green);background:rgba(61,214,140,.06)}
+.upload-zone .icon{font-size:32px;margin-bottom:10px}
+.upload-zone .lbl{font-size:14px;color:var(--white);font-weight:600;margin-bottom:4px}
+.upload-zone .hint{font-size:12px;color:var(--text2)}
+.parsed-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:8px;font-size:13px}
+.parsed-item .name{color:var(--white);font-weight:600}
+.parsed-item .amount{color:var(--red);font-weight:700}
+.parsed-item .meta{color:var(--text2);font-size:11px;margin-top:2px}
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.cf-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px}
+.cf-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:18px}
+.cf-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.cf-row:last-of-type{border:none}
+.cf-foot{display:flex;justify-content:space-between;font-size:16px;font-weight:800;padding:14px 0 0;margin-top:4px}
+.surplus-bar{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.surplus-bar .lbl{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.surplus-bar .desc{font-size:13px;color:var(--text2);margin-top:6px}
+.surplus-num{font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1}
+
+/* SECTION */
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sec-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:14px 20px;background:var(--bg2);color:var(--text2);font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700;border-bottom:1px solid var(--border)}
+td{padding:14px 20px;border-bottom:1px solid var(--border)}
+tr:last-child td{border:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+
+/* DEBT */
+.debt-stack{display:flex;flex-direction:column;gap:14px;margin-bottom:28px}
+.debt{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;transition:all .2s}
+.debt:hover{border-color:var(--border2)}
+.debt-head{display:flex;justify-content:space-between;margin-bottom:16px}
+.debt-name{font-size:17px;font-weight:700;color:var(--white)}
+.debt-note{font-size:12px;color:var(--text2);margin-top:3px}
+.debt-bal{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.debt-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:16px}
+.ds .lbl{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.ds .val{font-size:15px;font-weight:700;color:var(--white);margin-top:4px}
+.prog-bar{height:6px;background:var(--bg3);border-radius:3px;margin-top:16px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px}
+
+/* FORM */
+.form-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.form-card h4{font-size:15px;font-weight:700;color:var(--white);margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.field input,.field select{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;color:var(--white);font-family:var(--sans);font-size:14px;font-weight:500}
+.field input:focus,.field select:focus{outline:none;border-color:var(--purple2)}
+.field select option{background:var(--bg3)}
+
+/* CURVE */
+.curve-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:28px}
+.curve-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.curve-head h4{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+
+.empty{text-align:center;padding:48px;color:var(--text2);font-size:14px;line-height:1.7}
+
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.ac{animation:up .3s ease both}
+.ac:nth-child(1){animation-delay:.04s}.ac:nth-child(2){animation-delay:.08s}.ac:nth-child(3){animation-delay:.12s}.ac:nth-child(4){animation-delay:.16s}
+
+@media(max-width:800px){.sidebar{display:none}.cf-grid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="sidebar">
+  <div class="sb-brand"><h1>Velox Finance</h1><div class="sub">Personal Wealth</div></div>
+  <nav class="sb-nav" id="nav">
+    <div class="nav-item active" data-tab="dashboard"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</div>
+    <div class="nav-item" data-tab="cashflow"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Cash Flow</div>
+    <div class="nav-item" data-tab="debts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Debts</div>
+    <div class="nav-item" data-tab="projection"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Projection</div>
+    <div class="nav-item" data-tab="accounts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Accounts</div>
+    <div class="nav-item" data-tab="settings"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
+    <div style="height:1px;background:var(--border);margin:10px 4px"></div>
+    <div class="nav-item" data-tab="analyse" style="background:rgba(124,110,230,.08);border-color:rgba(124,110,230,.15)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="var(--purple2)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span style="color:var(--purple2)">Ask Claude</span>
+    </div>
+  </nav>
+  <div class="sb-foot" id="sbFoot"></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="tb-title" id="tbTitle">Dashboard</div><div class="tb-date" id="tbDate"></div></div>
+  <div class="content" id="content"></div>
+</div>
+</div>
+
+<script>
+const DEFAULTS={
+  accounts:[
+    {id:'a1',name:'Monzo',type:'current',balance:0,group:'personal',notes:'Main current account'},
+    {id:'a2',name:'Nationwide',type:'current',balance:0,group:'personal',notes:'Cleared overdraft post-bonus'},
+    {id:'a3',name:'Savings',type:'savings',balance:0,group:'personal',notes:'Emergency fund'},
+    {id:'a4',name:'Barclaycard',type:'credit',balance:-11778,apr:0,zeroIntUntil:'2027-08-01',minPayment:100,group:'personal',notes:'0% until Aug 2027 — minimums only'},
+    {id:'a5',name:'Monzo Loan',type:'loan',balance:-23147,apr:5,minPayment:478.60,group:'personal',notes:'5% structured — do not overpay'},
+    {id:'a6',name:'Velox — Current',type:'current',balance:0,group:'velox',notes:'Velox Capital Ltd current account'},
+    {id:'a7',name:'Velox — Spread Betting',type:'trading',balance:0,group:'velox',notes:'IG spread betting account'},
+    {id:'a8',name:'Property Equity',type:'property',balance:0,group:'wealth',notes:'Property value minus outstanding mortgage'},
+    {id:'a9',name:'Scottish Widows',type:'pension',balance:0,group:'wealth',notes:'Update from annual statement'},
+    {id:'a10',name:"St James's Place",type:'pension',balance:0,group:'wealth',notes:'Update from annual statement'},
+  ],
+  income:[
+    {id:'i1',name:'Salary',amount:4996,freq:'monthly'},
+    {id:'i2',name:'Yuka',amount:250,freq:'monthly'},
+    {id:'i3',name:'Elliott',amount:498,freq:'monthly'},
+    {id:'i4',name:'Spotify',amount:20,freq:'monthly'},
+  ],
+  bills:[
+    {id:'b1',name:'Mortgage',amount:1950.79,cat:'housing'},
+    {id:'b2',name:'Council Tax',amount:174,cat:'housing'},
+    {id:'b3',name:'Broadband',amount:62.50,cat:'utilities'},
+    {id:'b4',name:'Phone',amount:145.61,cat:'utilities'},
+    {id:'b5',name:'Octopus',amount:92,cat:'utilities'},
+    {id:'b6',name:'EON Heat',amount:50,cat:'utilities'},
+    {id:'b7',name:'Water',amount:53,cat:'utilities'},
+    {id:'b8',name:'Life Insurance',amount:53.08,cat:'insurance'},
+    {id:'b9',name:'Cat Insurance',amount:38.32,cat:'insurance'},
+    {id:'b10',name:'Contents Insurance',amount:9.65,cat:'insurance'},
+    {id:'b11',name:'Sky',amount:31.50,cat:'subscriptions'},
+    {id:'b12',name:'Bloomberg',amount:30,cat:'subscriptions'},
+    {id:'b13',name:'Monzo Premium',amount:17,cat:'subscriptions'},
+    {id:'b14',name:'Spotify',amount:30,cat:'subscriptions'},
+    {id:'b15',name:'TV License',amount:14.95,cat:'subscriptions'},
+    {id:'b16',name:'Monzo Premium 2',amount:15,cat:'subscriptions'},
+    {id:'b17',name:'Amazon Fresh',amount:8.99,cat:'subscriptions'},
+    {id:'b18',name:'Amazon Prime',amount:8.99,cat:'subscriptions'},
+    {id:'b19',name:'Apple',amount:8.99,cat:'subscriptions'},
+    {id:'b20',name:'Website',amount:4.49,cat:'subscriptions'},
+    {id:'b21',name:'Car',amount:360,cat:'transport'},
+    {id:'b22',name:'Car Insurance',amount:68,cat:'transport'},
+    {id:'b23',name:'Parking',amount:120,cat:'transport'},
+    {id:'b24',name:'Barclaycard min',amount:100,cat:'debt'},
+    {id:'b25',name:'Monzo Loan',amount:478.60,cat:'debt'},
+  ],
+  netWorthHistory:[],
+};
+
+let S=JSON.parse(localStorage.getItem('vf3')||'null')||JSON.parse(JSON.stringify(DEFAULTS));
+let tab='dashboard';
+const save=()=>localStorage.setItem('vf3',JSON.stringify(S));
+const fmt=(n,d=2)=>(+n||0).toLocaleString('en-GB',{minimumFractionDigits:d,maximumFractionDigits:d});
+const gbp=n=>{const v=+n||0;return(v<0?'-':'')+'£'+fmt(Math.abs(v))};
+const today=()=>new Date().toISOString().slice(0,10);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+const assets=()=>S.accounts.filter(a=>a.balance>0).reduce((s,a)=>s+a.balance,0);
+const liabs=()=>S.accounts.filter(a=>a.balance<0).reduce((s,a)=>s+Math.abs(a.balance),0);
+const nw=()=>assets()-liabs();
+const inc=()=>S.income.reduce((s,i)=>s+(i.freq==='monthly'?i.amount:i.amount/12),0);
+const bills=()=>S.bills.reduce((s,b)=>s+b.amount,0);
+const sur=()=>inc()-bills();
+const gTotal=g=>S.accounts.filter(a=>a.group===g).reduce((s,a)=>s+a.balance,0);
+const liqAssets=()=>S.accounts.filter(a=>a.group==='personal'&&a.balance>0).reduce((s,a)=>s+a.balance,0);
+
+function ring(pct,color,sz=60,sw=5){
+  const r=(sz-sw*2)/2,c=2*Math.PI*r,d=Math.max(0,Math.min(1,pct))*c;
+  return`<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" style="transform:rotate(-90deg);flex-shrink:0">
+  <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="${sw}"/>
+  <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${d} ${c}"/>
+  </svg>`;
+}
+
+const TITLES={dashboard:'Dashboard',cashflow:'Cash Flow',debts:'Debts',projection:'Projection',accounts:'Accounts',settings:'Settings',analyse:'Ask Claude'};
+
+function go(t){
+  tab=t;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===t));
+  document.getElementById('tbTitle').textContent=TITLES[t]||t;
+  render();
+}
+document.getElementById('nav').addEventListener('click',e=>{const it=e.target.closest('.nav-item');if(it?.dataset?.tab)go(it.dataset.tab)});
+
+function render(){
+  document.getElementById('tbDate').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  const s=sur();
+  document.getElementById('sbFoot').innerHTML=`Free cash / month<br><strong style="color:${s>=0?'var(--green)':'var(--red)'};font-size:15px">${gbp(s)}</strong>`;
+  const c=document.getElementById('content');
+  if(tab==='dashboard')c.innerHTML=renderDash();
+  else if(tab==='cashflow')c.innerHTML=renderCF();
+  else if(tab==='debts')c.innerHTML=renderDebts();
+  else if(tab==='projection')c.innerHTML=renderProj();
+  else if(tab==='accounts')c.innerHTML=renderAccounts();
+  else if(tab==='analyse')c.innerHTML=renderAnalyse();
+}
+
+function renderDash(){
+  const n=nw(),d=liabs(),a=assets(),liq=liqAssets(),wealth=gTotal('wealth'),velox=gTotal('velox'),s=sur();
+  const startDebt=56093;const paidPct=Math.max(0,1-d/startDebt);
+
+  const groups=[
+    {key:'personal',label:'Personal Accounts',dot:'var(--green)'},
+    {key:'velox',label:'Velox Capital',dot:'var(--blue)'},
+    {key:'wealth',label:'Long-term Wealth',dot:'var(--purple2)'},
+  ];
+
+  return`
+<div class="kpi-grid">
+  <div class="kpi"><div class="accent" style="background:${n>=0?'var(--green)':'var(--red)'}"></div>
+    <div class="lbl">Net Worth</div>
+    <div class="ring-row">${ring(Math.max(0,n)/(Math.max(0,n)+d||1),n>=0?'var(--green)':'var(--red)')}
+      <div><div class="val" style="color:${n>=0?'var(--green)':'var(--red)'};font-size:24px">${gbp(n)}</div><div class="sub">Assets vs liabilities</div></div>
+    </div>
+  </div>
+  <div class="kpi"><div class="accent" style="background:var(--green)"></div>
+    <div class="lbl">Liquid Cash</div><div class="val" style="color:var(--green)">${gbp(liq)}</div><div class="sub">Personal accounts</div>
+  </div>
+  <div class="kpi"><div class="accent" style="background:var(--red)"></div>
+    <div class="lbl">Total Debt</div>
+    <div class="ring-row">${ring(1-paidPct,'var(--red)')}
+      <div><div class="val" style="color:var(--red);font-size:24px">${gbp(d)}</div><div class="sub">${Math.round(paidPct*100)}% cleared from peak</div></div>
+    </div>
+  </div>
+  <div class="kpi"><div class="accent" style="background:var(--blue)"></div>
+    <div class="lbl">Velox Capital</div><div class="val" style="color:var(--blue)">${gbp(velox)}</div><div class="sub">Current + spread betting</div>
+  </div>
+  <div class="kpi"><div class="accent" style="background:var(--purple2)"></div>
+    <div class="lbl">Long-term Wealth</div><div class="val" style="color:var(--purple2)">${gbp(wealth)}</div><div class="sub">Property + pensions</div>
+  </div>
+  <div class="kpi"><div class="accent" style="background:${s>=0?'var(--green)':'var(--red)'}"></div>
+    <div class="lbl">Free Cash / mo</div><div class="val" style="color:${s>=0?'var(--green)':'var(--red)'}">${gbp(s)}</div><div class="sub">After all bills & debt mins</div>
+  </div>
+</div>
+${groups.map(g=>{
+  const accs=S.accounts.filter(a=>a.group===g.key);
+  const tot=accs.reduce((s,a)=>s+a.balance,0);
+  return`<div class="ag">
+  <div class="ag-head"><div class="ag-dot" style="background:${g.dot}"></div><div class="ag-title">${g.label}</div><div class="ag-total">${gbp(tot)}</div></div>
+  <div class="ac-grid">${accs.map(a=>renderAC(a)).join('')}</div>
+</div>`;
+}).join('')}
+${renderCurve()}`;
+}
+
+function renderAC(a){
+  const isDebt=a.balance<0;
+  const col=a.group==='velox'?'var(--blue)':a.group==='wealth'?'var(--purple2)':
+    a.zeroIntUntil?'var(--blue)':isDebt?'var(--red)':'var(--green)';
+  const chipBg=a.group==='velox'?'rgba(91,156,246,.12)':a.group==='wealth'?'rgba(162,155,254,.12)':
+    a.zeroIntUntil?'rgba(91,156,246,.12)':isDebt?'rgba(240,107,122,.12)':'rgba(61,214,140,.12)';
+  const chipTxt=a.group==='velox'?'VELOX':a.group==='wealth'?a.type.toUpperCase():a.zeroIntUntil?'0% INT':isDebt?'DEBT':'ASSET';
+  let meta=a.notes||'';
+  if(a.apr&&!a.zeroIntUntil)meta=`${a.apr}% APR · ~${gbp(Math.abs(a.balance)*a.apr/1200)}/mo interest`;
+  if(a.zeroIntUntil){const days=Math.ceil((new Date(a.zeroIntUntil)-new Date())/864e5);meta=`0% until ${new Date(a.zeroIntUntil).toLocaleDateString('en-GB',{month:'short',year:'numeric'})} · ${days} days left`;}
+  return`<div class="ac">
+  <div class="top-bar" style="background:${col}"></div>
+  <div class="ac-head">
+    <div><div class="ac-name">${a.name}</div><div class="ac-type">${a.type}</div></div>
+    <div class="chip" style="background:${chipBg};color:${col}">${chipTxt}</div>
+  </div>
+  <div class="ac-line"></div>
+  <div class="ac-bal" style="color:${col}">${gbp(a.balance)}</div>
+  <div class="ac-meta">${meta}</div>
+  <button class="btn" onclick="qUpdate('${a.id}')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Update balance
+  </button>
+</div>`;
+}
+
+function renderCurve(){
+  const h=S.netWorthHistory;
+  if(h.length<2)return`<div class="curve-card"><div class="curve-head"><h4>Net Worth History</h4><button class="btn btn-g" onclick="snapNW()">Snapshot today</button></div><div class="empty">Snapshot your balances each month to build your net worth curve.</div></div>`;
+  const vals=h.map(x=>x.value);const mx=Math.max(...vals,1);const mn=Math.min(...vals,-1);
+  const rng=mx-mn||1;const W=800;const H=130;const sx=W/(h.length-1||1);
+  const pt=(x,i)=>`${i*sx},${H-((x.value-mn)/rng)*H}`;
+  const path=h.map((x,i)=>`${i===0?'M':'L'}${pt(x,i)}`).join(' ');
+  const fill=path+` L${(h.length-1)*sx},${H} L0,${H} Z`;
+  const zY=H-((0-mn)/rng)*H;const last=h[h.length-1].value;const col=last>=0?'var(--green)':'var(--red)';
+  return`<div class="curve-card"><div class="curve-head"><h4>Net Worth History</h4><button class="btn" onclick="snapNW()">Snapshot today</button></div>
+  <svg viewBox="0 0 ${W} ${H+28}" style="width:100%;height:auto">
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${col}" stop-opacity=".15"/><stop offset="100%" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    <line x1="0" y1="${zY}" x2="${W}" y2="${zY}" stroke="rgba(255,255,255,.05)" stroke-width="1" stroke-dasharray="4"/>
+    <path d="${fill}" fill="url(#cg)"/>
+    <path d="${path}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${h.map((x,i)=>`<text x="${i*sx}" y="${H+20}" fill="var(--text2)" font-size="10" font-family="Manrope" text-anchor="${i===0?'start':i===h.length-1?'end':'middle'}" font-weight="600">${new Date(x.date).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}</text>`).join('')}
+  </svg></div>`;
+}
+
+function renderCF(){
+  const i=inc(),b=bills(),s=sur();
+  const catOrder=['housing','utilities','insurance','transport','subscriptions','debt','other'];
+  const byCat={};S.bills.forEach(x=>{if(!byCat[x.cat])byCat[x.cat]=[];byCat[x.cat].push(x)});
+  const debtRepayments=S.bills.filter(x=>x.cat==='debt');
+  const debtTotal=debtRepayments.reduce((s,x)=>s+x.amount,0);
+  const nonDebtBills=S.bills.filter(x=>x.cat!=='debt');
+  const nonDebtTotal=nonDebtBills.reduce((s,x)=>s+x.amount,0);
+
+  // Sort categories in logical order
+  const sortedCats=catOrder.filter(c=>byCat[c]);
+
+  return`
+<div class="cf-grid">
+  <div class="cf-card"><div class="cf-title">Income</div>
+    ${S.income.map(x=>`<div class="cf-row"><span style="color:var(--white);font-weight:500">${x.name}</span><span style="color:var(--green);font-weight:700">${gbp(x.amount)}</span></div>`).join('')}
+    <div class="cf-foot"><span>Total income</span><span style="color:var(--green)">${gbp(i)}</span></div>
+  </div>
+  <div class="cf-card"><div class="cf-title">Outgoings by category</div>
+    ${sortedCats.map(cat=>{
+      const items=byCat[cat];
+      const total=items.reduce((s,x)=>s+x.amount,0);
+      const isDebt=cat==='debt';
+      return`<div style="margin-bottom:4px">
+        <div class="cf-row" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          <span style="color:var(--white);font-weight:600;text-transform:capitalize;display:flex;align-items:center;gap:6px">
+            <span style="width:6px;height:6px;border-radius:50%;background:${isDebt?'var(--amber)':'var(--text2)'}"></span>${cat}
+            <span style="font-size:11px;color:var(--text2);font-weight:500">(${items.length})</span>
+          </span>
+          <span style="color:${isDebt?'var(--amber)':'var(--red)'};font-weight:700">${gbp(total)}</span>
+        </div>
+        <div style="display:none;padding:4px 0 8px 16px;border-left:2px solid var(--border);margin-left:6px">
+          ${items.map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--text2)">${x.name}</span><span style="color:${isDebt?'var(--amber)':'var(--red)'};">${gbp(x.amount)}</span></div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="cf-foot"><span>Total outgoings</span><span style="color:var(--red)">${gbp(b)}</span></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+  <div class="surplus-bar" style="margin-bottom:0">
+    <div><div class="lbl">Monthly free cash</div><div class="desc">${gbp(i)} income − ${gbp(b)} outgoings</div></div>
+    <div class="surplus-num" style="color:${s>=0?'var(--green)':'var(--red)'}">${gbp(s)}</div>
+  </div>
+  <div style="background:rgba(240,160,64,.06);border:1px solid rgba(240,160,64,.18);border-radius:16px;padding:24px 28px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:1px;text-transform:uppercase">Debt repayments/mo</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px">${debtRepayments.map(x=>x.name+' '+gbp(x.amount)).join(' · ')}</div>
+    </div>
+    <div style="font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--amber)">${gbp(debtTotal)}</div>
+  </div>
+</div>
+
+<div class="sec-head"><div class="sec-title">All bills (${S.bills.length})</div><button class="btn" onclick="go('settings')">+ Add bill</button></div>
+<div class="tbl-wrap"><table><tr><th>Bill</th><th>Category</th><th>Amount/mo</th><th></th></tr>
+${S.bills.map(x=>`<tr><td style="color:var(--white);font-weight:600">${x.name}</td><td style="color:${x.cat==='debt'?'var(--amber)':'var(--text2)'};text-transform:capitalize;font-weight:${x.cat==='debt'?'700':'400'}">${x.cat}</td><td style="color:${x.cat==='debt'?'var(--amber)':'var(--red)'};font-weight:700">${gbp(x.amount)}</td><td><button class="btn btn-r" onclick="rmBill('${x.id}')">Remove</button></td></tr>`).join('')}
+</table></div>`;
+}
+
+function renderDebts(){
+  const debts=S.accounts.filter(a=>a.balance<0).sort((a,b)=>(b.apr||0)-(a.apr||0));
+  if(!debts.length)return'<div class="empty">No debts recorded.</div>';
+  const tot=debts.reduce((s,d)=>s+Math.abs(d.balance),0);
+  const peak=56093;const s=sur();
+  return`
+<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="kpi"><div class="accent" style="background:var(--red)"></div><div class="lbl">Total Debt</div><div class="val" style="color:var(--red)">${gbp(tot)}</div></div>
+  <div class="kpi"><div class="accent" style="background:var(--green)"></div><div class="lbl">Cleared from peak</div><div class="val" style="color:var(--green)">${gbp(Math.max(0,peak-tot))}</div><div class="sub">Peak: £56,093</div></div>
+  <div class="kpi"><div class="accent" style="background:var(--amber)"></div><div class="lbl">Monthly interest cost</div><div class="val" style="color:var(--amber)">${gbp(debts.reduce((s,d)=>s+(d.apr&&!d.zeroIntUntil?Math.abs(d.balance)*d.apr/1200:0),0))}</div></div>
+</div>
+<div class="debt-stack">
+${debts.map(d=>{
+  const bal=Math.abs(d.balance);
+  const mi=d.apr&&!d.zeroIntUntil?bal*d.apr/1200:0;
+  const col=d.zeroIntUntil?'var(--blue)':d.apr>=20?'var(--red)':d.apr>=5?'var(--amber)':'var(--text2)';
+  const tag=d.zeroIntUntil?'0% INTEREST':d.apr>=20?'HIGH PRIORITY':d.apr>=5?'STRUCTURED':'';
+  const days=d.zeroIntUntil?Math.ceil((new Date(d.zeroIntUntil)-new Date())/864e5):null;
+  return`<div class="debt">
+  <div class="debt-head">
+    <div><div class="debt-name">${d.name}</div><div class="debt-note">${d.notes||''}</div></div>
+    <div style="text-align:right"><div class="debt-bal" style="color:${col}">${gbp(d.balance)}</div>
+    ${tag?`<div style="font-size:11px;color:${col};font-weight:700;margin-top:4px">${tag}</div>`:''}</div>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,bal/peak*100)}%;background:${col}"></div></div>
+  <div class="debt-stats">
+    <div class="ds"><div class="lbl">APR</div><div class="val">${d.zeroIntUntil?`0% (${days}d left)`:d.apr?d.apr+'%':'—'}</div></div>
+    <div class="ds"><div class="lbl">Min payment</div><div class="val">${d.minPayment?gbp(d.minPayment)+'/mo':'—'}</div></div>
+    <div class="ds"><div class="lbl">Monthly interest</div><div class="val" style="color:${mi>0?'var(--amber)':'var(--green)'}">${mi>0?gbp(mi):'£0'}</div></div>
+    ${s>0&&!d.zeroIntUntil&&d.apr>0?`<div class="ds"><div class="lbl">Clear in</div><div class="val" style="color:var(--green)">${Math.ceil(bal/s)} months</div></div>`:''}
+  </div>
+</div>`}).join('')}
+</div>`;
+}
+
+function renderProj(){
+  const rows=[];let accs=JSON.parse(JSON.stringify(S.accounts));
+  for(let m=1;m<=24;m++){
+    accs=accs.map(a=>{
+      if(a.balance<0&&a.minPayment)a.balance=Math.min(0,a.balance+a.minPayment);
+      if(a.balance<0&&a.apr&&!a.zeroIntUntil)a.balance-=Math.abs(a.balance)*a.apr/1200;
+      return a;
+    });
+    const n=accs.reduce((s,a)=>s+a.balance,0);
+    const d=accs.filter(a=>a.balance<0).reduce((s,a)=>s+Math.abs(a.balance),0);
+    const dt=new Date();dt.setMonth(dt.getMonth()+m);
+    rows.push({month:dt.toLocaleDateString('en-GB',{month:'short',year:'numeric'}),n,d,s:sur()});
+  }
+  return`
+<div style="font-size:13px;color:var(--text2);margin-bottom:20px;padding:16px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;line-height:1.7">
+Assumes current income, bills, and minimum payments only. Update balances regularly for accuracy.
+</div>
+<div class="tbl-wrap"><table><tr><th>Month</th><th>Net Worth</th><th>Total Debt</th><th>Free Cash/mo</th></tr>
+${rows.map(r=>`<tr><td style="color:var(--text2);font-weight:600">${r.month}</td><td style="color:${r.n>=0?'var(--green)':'var(--red)'};font-weight:700">${gbp(r.n)}</td><td style="color:${r.d<10000?'var(--green)':r.d<25000?'var(--amber)':'var(--red)'};font-weight:700">${gbp(r.d)}</td><td style="color:var(--green);font-weight:700">${gbp(r.s)}</td></tr>`).join('')}
+</table></div>`;
+}
+
+function renderAccounts(){
+  return`<div class="form-card"><h4>Add Account</h4>
+<div class="form-row">
+<div class="field"><label>Name</label><input type="text" id="fa_n" placeholder="e.g. Monzo"></div>
+<div class="field"><label>Type</label><select id="fa_t"><option value="current">Current</option><option value="savings">Savings</option><option value="credit">Credit card</option><option value="loan">Loan</option><option value="trading">Trading</option><option value="property">Property</option><option value="pension">Pension</option></select></div>
+<div class="field"><label>Balance £</label><input type="number" id="fa_b" step="0.01" placeholder="Negative = debt"></div>
+<div class="field"><label>Group</label><select id="fa_g"><option value="personal">Personal</option><option value="velox">Velox Capital</option><option value="wealth">Long-term Wealth</option></select></div>
+<div class="field"><label>APR %</label><input type="number" id="fa_a" step="0.1" placeholder="0"></div>
+<div class="field"><label>Min Payment £/mo</label><input type="number" id="fa_m" step="0.01" placeholder="0"></div>
+<div class="field"><label>0% Expires</label><input type="date" id="fa_z"></div>
+<div class="field" style="grid-column:span 2"><label>Notes</label><input type="text" id="fa_nt"></div>
+</div>
+<button class="btn btn-g" onclick="addAc()">Add Account</button>
+</div>
+<div class="tbl-wrap"><table><tr><th>Account</th><th>Group</th><th>Balance</th><th>APR</th><th>Min/mo</th><th></th></tr>
+${S.accounts.map(a=>`<tr><td><div style="font-weight:700;color:var(--white)">${a.name}</div><div style="font-size:12px;color:var(--text2)">${a.type}</div></td><td style="color:var(--text2)">${a.group}</td><td style="color:${a.balance>=0?'var(--green)':'var(--red)'};font-weight:700">${gbp(a.balance)}</td><td>${a.zeroIntUntil?'0%':a.apr?a.apr+'%':'—'}</td><td>${a.minPayment?gbp(a.minPayment):'—'}</td><td style="display:flex;gap:8px"><button class="btn" onclick="qUpdate('${a.id}')">Edit</button><button class="btn btn-r" onclick="rmAc('${a.id}')">Remove</button></td></tr>`).join('')}
+</table></div>`;
+}
+
+function renderSettings(){
+  return`<div class="cf-grid">
+<div class="form-card"><h4>Add Income Stream</h4>
+<div class="form-row">
+<div class="field"><label>Source</label><input type="text" id="fi_n" placeholder="e.g. Freelance"></div>
+<div class="field"><label>Amount £</label><input type="number" id="fi_a" step="0.01"></div>
+<div class="field"><label>Frequency</label><select id="fi_f"><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div>
+</div>
+<button class="btn btn-g" onclick="addInc()">Add Income</button>
+<div style="margin-top:18px;display:flex;flex-direction:column;gap:6px">
+${S.income.map(i=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--bg3);border-radius:10px"><span style="color:var(--white);font-weight:600">${i.name}</span><span style="color:var(--green);font-weight:700">${gbp(i.amount)}/mo</span></div>`).join('')}
+</div>
+</div>
+<div class="form-card"><h4>Add Bill</h4>
+<div class="form-row">
+<div class="field"><label>Name</label><input type="text" id="fb_n" placeholder="e.g. Gym"></div>
+<div class="field"><label>Amount £/mo</label><input type="number" id="fb_a" step="0.01"></div>
+<div class="field"><label>Category</label><select id="fb_c"><option value="housing">Housing</option><option value="utilities">Utilities</option><option value="insurance">Insurance</option><option value="transport">Transport</option><option value="subscriptions">Subscriptions</option><option value="debt">Debt</option><option value="other">Other</option></select></div>
+</div>
+<button class="btn btn-g" onclick="addBill()">Add Bill</button>
+</div>
+</div>
+<div class="form-card"><h4>Data</h4><div style="display:flex;gap:10px">
+<button class="btn" onclick="exportD()">Export JSON</button>
+<button class="btn btn-r" onclick="if(confirm('Reset?')){localStorage.removeItem('vf3');location.reload()}">Reset all data</button>
+</div></div>`;
+}
+
+function qUpdate(id){const a=S.accounts.find(a=>a.id===id);if(!a)return;const v=prompt(`${a.name}\nCurrent: ${gbp(a.balance)}\n\nEnter new balance (negative for debt):`);if(v===null)return;a.balance=parseFloat(v)||0;save();render();}
+function addAc(){const n=document.getElementById('fa_n').value.trim();if(!n)return;S.accounts.push({id:uid(),name:n,type:document.getElementById('fa_t').value,balance:parseFloat(document.getElementById('fa_b').value)||0,group:document.getElementById('fa_g').value,apr:parseFloat(document.getElementById('fa_a').value)||0,minPayment:parseFloat(document.getElementById('fa_m').value)||0,zeroIntUntil:document.getElementById('fa_z').value||null,notes:document.getElementById('fa_nt').value});save();render();}
+function rmAc(id){if(!confirm('Remove?'))return;S.accounts=S.accounts.filter(a=>a.id!==id);save();render();}
+function addInc(){const n=document.getElementById('fi_n').value.trim();if(!n)return;S.income.push({id:uid(),name:n,amount:parseFloat(document.getElementById('fi_a').value)||0,freq:document.getElementById('fi_f').value});save();render();}
+function addBill(){const n=document.getElementById('fb_n').value.trim();if(!n)return;S.bills.push({id:uid(),name:n,amount:parseFloat(document.getElementById('fb_a').value)||0,cat:document.getElementById('fb_c').value});save();render();}
+function rmBill(id){S.bills=S.bills.filter(b=>b.id!==id);save();render();}
+function snapNW(){const n=nw();const t=today();S.netWorthHistory=S.netWorthHistory.filter(h=>h.date!==t);S.netWorthHistory.push({date:t,value:n});S.netWorthHistory.sort((a,b)=>new Date(a.date)-new Date(b.date));save();render();}
+function buildFinancialBrief(){
+  const n=nw(),a=assets(),l=liabs(),i=inc(),b=bills(),s=sur();
+  const byCat={};S.bills.forEach(x=>{if(!byCat[x.cat])byCat[x.cat]=0;byCat[x.cat]+=x.amount});
+  const debts=S.accounts.filter(a=>a.balance<0).sort((a,b)=>(b.apr||0)-(a.apr||0));
+  const hist=S.netWorthHistory;
+
+  return`# Velox Finance — Full Financial Brief
+Date: ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}
+
+## NET WORTH SUMMARY
+- Net Worth: ${gbp(n)}
+- Total Assets: ${gbp(a)}
+- Total Liabilities: ${gbp(l)}
+- Liquid Personal Assets: ${gbp(liqAssets())}
+- Velox Capital (trading): ${gbp(gTotal('velox'))}
+- Long-term Wealth (property + pensions): ${gbp(gTotal('wealth'))}
+
+## ALL ACCOUNTS
+${S.accounts.map(acc=>`- ${acc.name} (${acc.group}/${acc.type}): ${gbp(acc.balance)}${acc.apr?' | '+acc.apr+'% APR':''}${acc.zeroIntUntil?' | 0% until '+acc.zeroIntUntil:''}${acc.minPayment?' | min '+gbp(acc.minPayment)+'/mo':''}`).join('\n')}
+
+## MONTHLY CASH FLOW
+Income: ${gbp(i)}/mo
+${S.income.map(x=>`  - ${x.name}: ${gbp(x.amount)}`).join('\n')}
+
+Total Bills: ${gbp(b)}/mo
+${Object.entries(byCat).map(([cat,amt])=>`  - ${cat}: ${gbp(amt)}`).join('\n')}
+
+Monthly Free Cash: ${gbp(s)}
+
+## DEBT BREAKDOWN (highest APR first)
+${debts.map(d=>{
+  const mi=d.apr&&!d.zeroIntUntil?Math.abs(d.balance)*d.apr/1200:0;
+  const days=d.zeroIntUntil?Math.ceil((new Date(d.zeroIntUntil)-new Date())/864e5):null;
+  return`- ${d.name}: ${gbp(d.balance)} | APR: ${d.zeroIntUntil?`0% (${days} days left)`:d.apr?d.apr+'%':'N/A'} | Monthly interest: ${gbp(mi)} | Min payment: ${gbp(d.minPayment||0)}/mo`;
+}).join('\n')}
+
+## NET WORTH HISTORY
+${hist.length>0?hist.map(h=>`- ${h.date}: ${gbp(h.value)}`).join('\n'):'No snapshots taken yet.'}
+
+## CONTEXT
+- Peak debt was approximately £56,093 (pre-bonus paydown)
+- Barclaycard is 0% interest until ${S.accounts.find(a=>a.zeroIntUntil)?.zeroIntUntil||'N/A'} — minimum payments only strategy
+- Monzo Loan at 5% is long-term structured — not being overpaid
+- Japan relocation planned in 12-18 months with partner Yuka
+- Trading via Velox Capital Ltd (spread betting IG) and GOAT funded account ($100k)`;
+}
+
+function renderAnalyse(){
+  return`
+<div class="ai-panel">
+  <h4>Copy your financial brief for Claude</h4>
+  <p class="sub">Click a button below to copy your complete financial data to clipboard — pre-formatted so Claude can read it instantly. Then paste it into any Claude conversation and ask anything.</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+    <button class="ai-btn ai-btn-primary" onclick="copyBrief('full')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copy Full Brief
+    </button>
+    <button class="btn" style="font-size:13px" onclick="copyBrief('debt')">Copy Debt Summary</button>
+    <button class="btn" style="font-size:13px" onclick="copyBrief('cashflow')">Copy Cash Flow</button>
+    <button class="btn" style="font-size:13px" onclick="copyBrief('snapshot')">Copy Net Worth Snapshot</button>
+  </div>
+  <div id="copyConfirm" style="display:none;padding:14px 18px;background:rgba(61,214,140,.08);border:1px solid rgba(61,214,140,.2);border-radius:10px;color:var(--green);font-size:14px;font-weight:600;margin-bottom:16px">
+    ✓ Copied to clipboard — paste it into Claude and ask your question
+  </div>
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;font-size:12px;line-height:1.8;color:var(--text2);font-family:monospace;white-space:pre-wrap;max-height:320px;overflow-y:auto" id="briefPreview"></div>
+</div>
+
+<div class="ai-panel">
+  <h4>Statement Parser</h4>
+  <p class="sub">Upload a bank statement CSV (Monzo, Nationwide, Barclaycard export) to automatically detect recurring payments and cross-reference against your bills list. Runs locally — nothing is sent anywhere.</p>
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('statementInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+    <div class="icon">📄</div>
+    <div class="lbl">Drop statement CSV here or click to upload</div>
+    <div class="hint">Monzo · Nationwide · Barclaycard CSV exports · runs locally</div>
+  </div>
+  <input type="file" id="statementInput" accept=".csv,.txt" style="display:none" onchange="parseStatement(this.files[0])">
+  <div id="statementResults"></div>
+</div>`;
+}
+
+function copyBrief(type){
+  const full=buildFinancialBrief();
+  let text='';
+  if(type==='full'){text=full;}
+  else if(type==='debt'){
+    const debts=S.accounts.filter(a=>a.balance<0).sort((a,b)=>(b.apr||0)-(a.apr||0));
+    text=`# Debt Summary — ${new Date().toLocaleDateString('en-GB')}\n\nTotal debt: ${gbp(liabs())}\nMonthly surplus: ${gbp(sur())}\n\n${debts.map(d=>{
+      const mi=d.apr&&!d.zeroIntUntil?Math.abs(d.balance)*d.apr/1200:0;
+      return`- ${d.name}: ${gbp(d.balance)} | ${d.zeroIntUntil?'0% INT':d.apr?d.apr+'% APR':'N/A'} | ~${gbp(mi)}/mo interest | min ${gbp(d.minPayment||0)}/mo`;
+    }).join('\n')}`;
+  }
+  else if(type==='cashflow'){
+    const byCat={};S.bills.forEach(x=>{if(!byCat[x.cat])byCat[x.cat]=0;byCat[x.cat]+=x.amount});
+    text=`# Cash Flow — ${new Date().toLocaleDateString('en-GB')}\n\nIncome: ${gbp(inc())}/mo\n${S.income.map(x=>`  - ${x.name}: ${gbp(x.amount)}`).join('\n')}\n\nOutgoings: ${gbp(bills())}/mo\n${Object.entries(byCat).map(([c,a])=>`  - ${c}: ${gbp(a)}`).join('\n')}\n\nFree cash: ${gbp(sur())}/mo`;
+  }
+  else if(type==='snapshot'){
+    text=`# Net Worth Snapshot — ${new Date().toLocaleDateString('en-GB')}\n\nNet worth: ${gbp(nw())}\nAssets: ${gbp(assets())}\nLiabilities: ${gbp(liabs())}\nVelox Capital: ${gbp(gTotal('velox'))}\nLong-term wealth: ${gbp(gTotal('wealth'))}\n\n${S.accounts.map(a=>`- ${a.name}: ${gbp(a.balance)}`).join('\n')}`;
+  }
+  navigator.clipboard.writeText(text).then(()=>{
+    const confirm=document.getElementById('copyConfirm');
+    confirm.style.display='block';
+    setTimeout(()=>confirm.style.display='none',4000);
+  });
+  document.getElementById('briefPreview').textContent=text;
+}
+
+function handleDrop(e){
+  e.preventDefault();document.getElementById('uploadZone').classList.remove('drag-over');
+  const f=e.dataTransfer.files[0];if(f)parseStatement(f);
+}
+
+async function parseStatement(file){
+  if(!file)return;
+  const res=document.getElementById('statementResults');
+  res.innerHTML='<div style="color:var(--text2);padding:16px 0;font-size:13px">Reading statement...</div>';
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(lines.length<3){res.innerHTML='<div style="color:var(--red);padding:12px 0;font-size:13px">Could not read file. Make sure it is a CSV export from your bank.</div>';return;}
+
+  // Parse CSV — handle quoted fields
+  function parseCSVLine(line){return line.split(',').map(c=>c.replace(/^"|"$/g,'').trim())}
+  const headers=parseCSVLine(lines[0]).map(h=>h.toLowerCase());
+  const rows=lines.slice(1).map(parseCSVLine);
+
+  // Detect column indices for common bank formats
+  const nameCol=headers.findIndex(h=>h.includes('name')||h.includes('description')||h.includes('merchant')||h.includes('payee')||h.includes('details'));
+  const amtCol=headers.findIndex(h=>h.includes('amount')||h.includes('debit')||h.includes('paid out'));
+  const dateCol=headers.findIndex(h=>h.includes('date'));
+
+  if(nameCol===-1||amtCol===-1){
+    res.innerHTML=`<div style="color:var(--amber);padding:12px;background:rgba(240,160,64,.06);border-radius:8px;font-size:13px;line-height:1.6">
+      Columns detected: ${headers.join(', ')}<br>Could not find name/amount columns automatically. Try exporting as CSV from Monzo app (Account → Export transactions).
+    </div>`;return;
+  }
+
+  // Extract outgoing transactions with names and amounts
+  const txns=rows.map(r=>{
+    const raw=r[amtCol]||'';
+    const amt=Math.abs(parseFloat(raw.replace(/[^0-9.-]/g,''))||0);
+    const name=(r[nameCol]||'').trim();
+    const isDD=isDDRow(r);
+    return{name,amt,date:r[dateCol]||'',isDD};
+  }).filter(t=>t.name&&t.amt>0.5);
+
+  // Known debt/transfer/finance keywords — flag even if appearing once
+  const debtKeywords=[
+    'barclaycard','monzo','mbna','amex','american express','nationwide','paypal','loan','credit card','mortgage',
+    'finance','financial','leasing','lease','hire purchase','black horse','volkswagen','vw finance','bmw',
+    'toyota','ford credit','honda','mercedes','peugeot','vauxhall','renault','hyundai','kia','audi',
+    'santander consumer','alphera','motonovus','vehicle','motor','auto','pcf','pcp','hitachi',
+    'close brothers','bnp paribas','fca automotive','caf','cazoo','cinch','arnold clark'
+  ];
+
+  // Detect type column — catches direct debits regardless of merchant name
+  const typeCol=headers.findIndex(h=>h.includes('type')||h==='type');
+  const isDDRow=typeCol>=0
+    ? r=>{ const t=(r[typeCol]||'').toLowerCase(); return t.includes('direct debit')||t==='dd'; }
+    : ()=>false;
+
+  const debtPayments=txns.filter(t=>{
+    const low=t.name.toLowerCase();
+    return (debtKeywords.some(k=>low.includes(k))||t.isDD) && t.amt>50;
+  });
+
+  // Group by normalised merchant name, count occurrences
+  const merchants={};
+  txns.forEach(t=>{
+    const key=t.name.toLowerCase().replace(/\d+/g,'').replace(/\s+/g,' ').trim();
+    if(!merchants[key])merchants[key]={name:t.name,count:0,amounts:[],dates:[],isDD:false};
+    merchants[key].count++;
+    merchants[key].amounts.push(t.amt);
+    merchants[key].dates.push(t.date);
+    if(t.isDD)merchants[key].isDD=true;
+  });
+
+  // Flag as recurring if: appears 2+ times with consistent amount, OR is a known debt/finance keyword, OR is a direct debit
+  const recurring=Object.values(merchants).filter(m=>{
+    const low=m.name.toLowerCase();
+    const isDebt=debtKeywords.some(k=>low.includes(k))&&m.amounts[0]>50;
+    const isDD=m.isDD;
+    if(isDebt||isDD)return true;
+    if(m.count<2)return false;
+    const avg=m.amounts.reduce((s,a)=>s+a,0)/m.amounts.length;
+    return m.amounts.every(a=>Math.abs(a-avg)/avg<0.2);
+  }).map(m=>{
+    const avg=m.amounts.reduce((s,a)=>s+a,0)/m.amounts.length;
+    const low=m.name.toLowerCase();
+    const isDebt=debtKeywords.some(k=>low.includes(k));
+    return{name:m.name,amount:avg,count:m.count,isDebt,isDD:m.isDD};
+  }).sort((a,b)=>b.amount-a.amount);
+
+  // Also surface any single large payment (>£150) not already in recurring list — catches unknown finance companies
+  const recurringNames=new Set(recurring.map(r=>r.name.toLowerCase()));
+  const largeUnmatched=txns.filter(t=>t.amt>150&&!recurringNames.has(t.name.toLowerCase()))
+    .reduce((acc,t)=>{
+      const key=t.name.toLowerCase();
+      if(!acc.find(x=>x.name.toLowerCase()===key))acc.push({name:t.name,amount:t.amt,count:1,isDebt:false,isLarge:true});
+      return acc;
+    },[]).sort((a,b)=>b.amount-a.amount);
+
+  if(!recurring.length&&!largeUnmatched.length){res.innerHTML='<div style="color:var(--text2);padding:12px 0;font-size:13px">No recurring payments detected. Try uploading 2-3 months of statements for better detection.</div>';return;}
+
+  // Cross-reference against existing bills
+  const existingNames=S.bills.map(b=>b.name.toLowerCase());
+  const isTracked=name=>{
+    const low=name.toLowerCase();
+    return existingNames.some(e=>e.includes(low.slice(0,5))||low.includes(e.slice(0,5)));
+  };
+
+  const missing=recurring.filter(r=>!isTracked(r.name));
+  const tracked=recurring.filter(r=>isTracked(r.name));
+
+  res.innerHTML=`
+<div style="margin:16px 0 12px;padding:14px 18px;background:var(--bg3);border-radius:10px;font-size:13px;color:var(--text);line-height:1.6">
+  Found <strong style="color:var(--white)">${recurring.length} recurring payments</strong> in ${txns.length} transactions.
+  <span style="color:${missing.length>0?'var(--amber)':'var(--green)'}">${missing.length} not in your bills list.</span>
+  ${largeUnmatched.length>0?`<span style="color:var(--text2)"> · ${largeUnmatched.length} large one-off payments worth checking.</span>`:''}
+</div>
+${missing.length>0?`
+<div class="sec-head"><div class="sec-title" style="color:var(--amber)">Not tracked — review these (${missing.length})</div></div>
+${missing.map(r=>`<div class="parsed-item">
+  <div><div class="name">${r.name}${r.isDebt?' <span style="font-size:10px;color:var(--amber);font-weight:700;margin-left:6px">DEBT PAYMENT</span>':''}${r.isDD&&!r.isDebt?' <span style="font-size:10px;color:var(--blue);font-weight:700;margin-left:6px">DIRECT DEBIT</span>':''}</div><div class="meta">Appears ${r.count}x · avg ${gbp(r.amount)}</div></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="amount">−${gbp(r.amount)}/mo</span>
+    <button class="btn btn-g" style="font-size:11px;padding:5px 12px" data-name="${r.name}" data-amount="${r.amount}" onclick="addFromStatement(this)">+ Add</button>
+  </div>
+</div>`).join('')}`:''}
+${largeUnmatched.length>0?`
+<div class="sec-head" style="margin-top:16px"><div class="sec-title" style="color:var(--blue)">Large payments — verify if recurring (${largeUnmatched.length})</div></div>
+<div style="font-size:12px;color:var(--text2);margin-bottom:10px">These appear once but are large enough to be direct debits — car finance, insurance, etc. Add if recurring.</div>
+${largeUnmatched.map(r=>`<div class="parsed-item">
+  <div><div class="name">${r.name}</div><div class="meta">Single occurrence · ${gbp(r.amount)}</div></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="color:var(--blue);font-weight:700">−${gbp(r.amount)}</span>
+    <button class="btn" style="font-size:11px;padding:5px 12px;border-color:rgba(91,156,246,.3);color:var(--blue)" data-name="${r.name}" data-amount="${r.amount}" onclick="addFromStatement(this)">+ Add</button>
+  </div>
+</div>`).join('')}`:''}
+${tracked.length>0?`
+<div class="sec-head" style="margin-top:16px"><div class="sec-title" style="color:var(--green)">Already in bills list (${tracked.length})</div></div>
+${tracked.map(r=>`<div class="parsed-item"><div><div class="name">${r.name}${r.isDebt?' <span style="font-size:10px;color:var(--amber);font-weight:700">DEBT PAYMENT</span>':''}</div><div class="meta">Appears ${r.count}x · avg ${gbp(r.amount)}</div></div><span style="color:var(--green);font-weight:700">✓ tracked</span></div>`).join('')}`:''}`;
+}
+
+function addFromStatement(btn){
+  const name=btn.dataset.name;const amount=parseFloat(btn.dataset.amount);
+  S.bills.push({id:uid(),name,amount,cat:'other'});
+  save();
+  btn.closest('.parsed-item').style.opacity='0.5';
+  btn.textContent='✓ Added';btn.disabled=true;
+}
+
+function exportD(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='velox_finance_'+today()+'.json';a.click();}
+
+render();
+
+if('serviceWorker' in navigator){
+  const sw=`const C='velox-finance-v1';
+self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll([self.location.pathname])).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const clone=res.clone();caches.open(C).then(c=>c.put(e.request,clone));return res;}).catch(()=>caches.match(self.location.pathname)))));`;
+  const blob=new Blob([sw],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'}).catch(()=>{});
+}
+</script>
+</body>
+</html>
