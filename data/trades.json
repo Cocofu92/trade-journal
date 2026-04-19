@@ -306,6 +306,33 @@
       "closePrice": null,
       "pnl": null,
       "decimals": 3
+    },
+    {
+      "id": "mo5yqzo1zvn3",
+      "instrument": "Brent",
+      "assetClass": "Commodities",
+      "marginPct": 5,
+      "leverage": "1:20",
+      "direction": "long",
+      "date": "2026-04-17",
+      "timeframe": "Daily",
+      "entry": 8631,
+      "stop": 7865.3,
+      "target": 10843.4,
+      "stake": 0.25,
+      "scores": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "notes": "",
+      "screenshot": "",
+      "status": "open",
+      "closePrice": null,
+      "pnl": null,
+      "decimals": 3
     }
   ],
   "watchlist": {
