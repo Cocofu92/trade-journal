@@ -88,6 +88,16 @@ tr:hover td{background:var(--bg2)}
 .industry-body{display:none;padding:8px}
 .industry-body.open{display:block}
 
+/* Givens-style industry RS table */
+.industry-table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.industry-table thead th{background:var(--bg2);color:var(--text2);font-weight:600;padding:10px 8px;text-align:right;border-bottom:2px solid var(--border);text-transform:uppercase;letter-spacing:.5px;font-size:10px;position:sticky;top:0;z-index:2}
+.industry-table thead th:first-child{text-align:left}
+.industry-table thead th.sortable:hover{background:var(--bg3);color:var(--white)}
+.industry-table tbody td{padding:8px 8px;text-align:right;border-bottom:1px solid var(--border);color:var(--text)}
+.industry-table tbody tr.industry-row-table:hover{background:var(--bg2)}
+.industry-table tbody tr.industry-row-table{transition:background .15s}
+.industry-table tbody tr.industry-drill td{padding:0;border-bottom:2px solid var(--border)}
+
 /* Journal form */
 .form-section{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
@@ -129,6 +139,7 @@ tr:hover td{background:var(--bg2)}
 <div class="tabs" id="tabs">
 <div class="tab active" data-tab="screener">Screener</div>
 <div class="tab" data-tab="industry">Industry RS</div>
+<div class="tab" data-tab="alignment">Alignment</div>
 <div class="tab" data-tab="journal">Journal</div>
 <div class="tab" data-tab="stats">Stats</div>
 </div>
@@ -149,14 +160,147 @@ let screenerFilter={
   minPrice:2,maxPrice:0,minMcap:0,
   // CANSLIM defaults (William O'Neil's classic thresholds)
   minEpsGrowthQ:25,minEpsGrowthA:25,maxFromHigh:15,maxFloatM:0,minInstOwn:0,minDaysToEarnings:5,
-  canslim:true // ON by default
+  canslim:true, // ON by default
+  // Stage 1→2 filters (null = off)
+  stage12:false,
+  max12m:null,    // e.g. 30 = only stocks with 12M return ≤ 30% (dead money)
+  min1m:null,     // e.g. 5 = only stocks with 1M return ≥ 5% (emerging thrust)
+  maxDaysBreakout:null, // e.g. 60 = only stocks that broke above 150-SMA within last 60 trading days
+  maxRS:null,     // e.g. 85 = only stocks with RS ≤ 85 (not yet top decile = leader-in-waiting)
 };
 let screenerSubTab='setups';
 let sortCol='rsScore';let sortDir='desc';
 let industryExpanded={};
+let industrySortCol='rsConfirmed';
+let industrySortDir='desc';
+function setIndustrySort(col){
+  if(industrySortCol===col){industrySortDir=industrySortDir==='desc'?'asc':'desc'}
+  else{industrySortCol=col;industrySortDir='desc'}
+  render();
+}
 
 // Load cached data
 let scanResults=[];let scanMeta={lastRun:null,total:0,processed:0,errors:0};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FINVIZ INDUSTRY OVERRIDE MAP
+// One-time CSV import from Finviz gives us cleaner industry categorisation
+// than FMP's API. Map persists in localStorage; processStock checks it first.
+// ═══════════════════════════════════════════════════════════════════════════
+let finvizMap=(()=>{
+  try{
+    const saved=localStorage.getItem('velox_eq_finviz_map');
+    return saved?JSON.parse(saved):{};
+  }catch(e){return{};}
+})();
+let finvizMeta=(()=>{
+  try{
+    const saved=localStorage.getItem('velox_eq_finviz_meta');
+    return saved?JSON.parse(saved):{imported:null,count:0};
+  }catch(e){return{imported:null,count:0};}
+})();
+
+// Parse a Finviz CSV export. Expected columns: Ticker, Sector, Industry (also handles No.,Company,Country,Market Cap).
+// Returns {ticker: {sector, industry, country?, marketCap?}}.
+function parseFinvizCSV(text){
+  // Handle BOM + CRLF, split lines
+  const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)throw new Error('CSV appears empty');
+  // Simple CSV parser — Finviz exports are clean (no embedded commas in fields, no quote-escaping)
+  // but we handle quoted fields just in case
+  const parseLine=line=>{
+    const out=[];let cur='';let inQuote=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){inQuote=!inQuote;continue}
+      if(c===','&&!inQuote){out.push(cur);cur='';continue}
+      cur+=c;
+    }
+    out.push(cur);
+    return out.map(s=>s.trim());
+  };
+  const header=parseLine(lines[0]).map(h=>h.toLowerCase());
+  const tickerIdx=header.findIndex(h=>h==='ticker'||h==='symbol');
+  const industryIdx=header.findIndex(h=>h==='industry');
+  const sectorIdx=header.findIndex(h=>h==='sector');
+  const countryIdx=header.findIndex(h=>h==='country');
+  const marketCapIdx=header.findIndex(h=>h==='market cap'||h==='marketcap');
+  if(tickerIdx<0)throw new Error('No "Ticker" or "Symbol" column found in header');
+  if(industryIdx<0)throw new Error('No "Industry" column found in header');
+  const map={};
+  for(let i=1;i<lines.length;i++){
+    const cols=parseLine(lines[i]);
+    const ticker=(cols[tickerIdx]||'').toUpperCase().trim();
+    const industry=(cols[industryIdx]||'').trim();
+    if(!ticker||!industry)continue;
+    map[ticker]={
+      industry,
+      sector:sectorIdx>=0?(cols[sectorIdx]||'').trim():'',
+      country:countryIdx>=0?(cols[countryIdx]||'').trim():'',
+      marketCap:marketCapIdx>=0?parseFloat(cols[marketCapIdx])||0:0,
+    };
+  }
+  return map;
+}
+
+// Apply Finviz industry/sector overrides to existing scan results (no re-scan needed)
+// and recompute industryStats aggregate.
+function remapWithFinviz(){
+  if(Object.keys(finvizMap).length===0){log('Finviz map is empty — nothing to remap','warn');return;}
+  let remapped=0;
+  scanResults.forEach(r=>{
+    const fv=finvizMap[r.ticker];
+    if(fv&&fv.industry){
+      r.industry=fv.industry;
+      if(fv.sector)r.sector=fv.sector;
+      remapped++;
+    }
+  });
+  log(`Remapped ${remapped} of ${scanResults.length} stocks with Finviz industries`,'ok');
+  calcIndustryStats(scanResults);
+  saveScreener();
+  render();
+}
+
+// Triggered by "Import Finviz CSV" button
+function importFinvizCSV(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const map=parseFinvizCSV(e.target.result);
+      const count=Object.keys(map).length;
+      if(count===0){alert('Parsed 0 rows — check CSV format (needs Ticker and Industry columns)');return;}
+      if(!confirm(`Parsed ${count} tickers from Finviz CSV.\n\nThis will override FMP industry classifications for matched tickers in the current scan results AND all future scans.\n\nProceed?`))return;
+      finvizMap=map;
+      finvizMeta={imported:new Date().toISOString(),count};
+      localStorage.setItem('velox_eq_finviz_map',JSON.stringify(finvizMap));
+      localStorage.setItem('velox_eq_finviz_meta',JSON.stringify(finvizMeta));
+      log(`Finviz map imported: ${count} tickers`,'ok');
+      if(scanResults.length>0){
+        remapWithFinviz();
+        alert(`Finviz industries imported and applied.\n\n${count} tickers mapped. ${scanResults.filter(r=>finvizMap[r.ticker]).length} matched to current scan.`);
+      } else {
+        alert(`Finviz industries imported (${count} tickers). Will apply on next scan.`);
+      }
+    }catch(err){
+      alert('Failed to parse CSV: '+err.message);
+      log('Finviz import failed: '+err.message,'error');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+function clearFinvizMap(){
+  if(!confirm('Clear Finviz industry override map?\n\nFuture scans will use FMP industries. Existing scan results will NOT automatically revert — re-run scan to refresh.'))return;
+  finvizMap={};finvizMeta={imported:null,count:0};
+  localStorage.removeItem('velox_eq_finviz_map');
+  localStorage.removeItem('velox_eq_finviz_meta');
+  log('Finviz override map cleared','ok');
+  render();
+}
 let journalData=JSON.parse(localStorage.getItem('velox_eq_journal')||'null')||{trades:[]};
 
 // Compress full stock object to minimal keys for storage (41% smaller)
@@ -164,9 +308,13 @@ function compressStock(r){return{
   t:r.ticker,n:(r.name||'').slice(0,30),e:r.exchange||'',
   sec:r.sector||'',ind:r.industry||'',p:+r.price.toFixed(2),
   mc:Math.round((r.marketCap||0)/1e6),
+  r1w:+(r.ret1w||0).toFixed(1),
   r1:+r.ret1m.toFixed(1),r3:+r.ret3m.toFixed(1),
-  r6:+r.ret6m.toFixed(1),r12:+r.ret12m.toFixed(1),
-  rr:+r.rsRaw.toFixed(2),rs:r.rsScore,irs:r.industryRS,
+  r6:+r.ret6m.toFixed(1),r9:+(r.ret9m||0).toFixed(1),r12:+r.ret12m.toFixed(1),
+  rr:+r.rsRaw.toFixed(2),
+  re:+(r.rsEmerging||0).toFixed(2),rc:+(r.rsConfirmed||0).toFixed(2),
+  rs:r.rsScore,irs:r.industryRS,
+  dsb:r.daysSinceBreakout==null?null:r.daysSinceBreakout,
   tv:r.trendValid?1:0,ts:r.trendScore,
   rsi:+r.rsiVal.toFixed(1),
   p21:+r.pct21.toFixed(1),p50:+r.pct50.toFixed(1),p50h:+r.pct50H.toFixed(1),
@@ -183,8 +331,11 @@ function compressStock(r){return{
 function expandStock(c){return{
   ticker:c.t,name:c.n,exchange:c.e,sector:c.sec,industry:c.ind,
   price:c.p,marketCap:(c.mc||0)*1e6,avgVol:0,
-  ret1m:c.r1,ret3m:c.r3,ret6m:c.r6,ret12m:c.r12,
-  rsRaw:c.rr,rsScore:c.rs,industryRS:c.irs,indMedian:0,
+  ret1w:c.r1w||0,
+  ret1m:c.r1,ret3m:c.r3,ret6m:c.r6,ret9m:c.r9||0,ret12m:c.r12,
+  rsRaw:c.rr,rsEmerging:c.re||0,rsConfirmed:c.rc||0,
+  rsScore:c.rs,industryRS:c.irs,indMedian:0,
+  daysSinceBreakout:c.dsb==null?null:c.dsb,
   trendValid:c.tv===1,trendScore:c.ts,
   rsiVal:c.rsi,pct21:c.p21,pct50:c.p50,pct50H:c.p50h,
   range10:c.r10,range20:c.r20,range50:c.r50,volRatio:c.vr,setup:c.su,
@@ -198,6 +349,8 @@ if(cached){try{
   const raw=p.compressed||p.results||[];
   scanResults=raw.map(r=>p.compressed?expandStock(r):r);
   scanMeta=p.meta||scanMeta;
+  // Recompute industry stats from cached results (new field that didn't exist in v1 cache)
+  if(scanResults.length>0)calcIndustryStats(scanResults);
 }catch(e){}}
 
 function saveJournal(){localStorage.setItem('velox_eq_journal',JSON.stringify(journalData))}
@@ -213,7 +366,62 @@ function saveScreener(){
 
 // Math helpers
 function ema(data,period){const k=2/(period+1);let e=data[0];const out=[e];for(let i=1;i<data.length;i++){e=data[i]*k+e*(1-k);out.push(e)}return out}
+function sma(data,period){const out=new Array(period-1).fill(null);let sum=0;for(let i=0;i<period;i++)sum+=data[i];out.push(sum/period);for(let i=period;i<data.length;i++){sum=sum-data[i-period]+data[i];out.push(sum/period)}return out}
 function rsi(closes,period=14){const gains=[],losses=[];for(let i=1;i<closes.length;i++){const d=closes[i]-closes[i-1];gains.push(d>0?d:0);losses.push(d<0?-d:0)}let avgG=gains.slice(0,period).reduce((a,b)=>a+b,0)/period;let avgL=losses.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=new Array(period).fill(null);out.push(avgL===0?100:100-100/(1+avgG/avgL));for(let i=period;i<gains.length;i++){avgG=(avgG*(period-1)+gains[i])/period;avgL=(avgL*(period-1)+losses[i])/period;out.push(avgL===0?100:100-100/(1+avgG/avgL))}return out}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WEINSTEIN STAGE ANALYSIS — days since last clean breakout above 150-SMA
+// Stage 1→2 transition = stock was below 150-SMA (Stage 1 base), then closed
+// above it and sustained for 5+ trading days. "Fresh" = crossed within last
+// 4-8 weeks = prime entry zone. Returns null if no valid breakout in window.
+// ═══════════════════════════════════════════════════════════════════════════
+function daysSinceBaseBreakout(closes,sma150){
+  const n=closes.length;
+  if(n<180)return null;            // need enough history beyond the SMA
+  const CONFIRM_DAYS=5;             // must sustain above for 5 days = confirmed cross
+  const MAX_LOOKBACK=200;           // only look back ~10 months for recent transitions
+
+  // Walk back from most recent bar. Find the most recent day where price was BELOW
+  // SMA and the next day it was ABOVE, and it stayed above for CONFIRM_DAYS+ bars.
+  // Returns trading days since that breakout.
+  const start=Math.max(0,n-MAX_LOOKBACK);
+  let lastCrossIdx=-1;
+  for(let i=n-1;i>=start+1;i--){
+    if(sma150[i]===null||sma150[i-1]===null)continue;
+    const above=closes[i]>sma150[i];
+    const prevAbove=closes[i-1]>sma150[i-1];
+    if(above&&!prevAbove){
+      // Potential cross. Check next CONFIRM_DAYS bars stayed above (or close to it — allow 1 violation)
+      let sustained=0;
+      let violations=0;
+      for(let j=i;j<Math.min(n,i+CONFIRM_DAYS);j++){
+        if(closes[j]>sma150[j])sustained++;
+        else violations++;
+      }
+      if(sustained>=CONFIRM_DAYS-1&&violations<=1){
+        lastCrossIdx=i;
+        // Don't break — keep searching forward to find THE MOST RECENT clean cross
+        // (actually we're walking backward from present, so the first clean cross we
+        // find is the most recent. But we want to also check: did price then break
+        // BACK below for 10+ days after? If so, this isn't the active breakout)
+      }
+    }
+  }
+  if(lastCrossIdx<0)return null;
+
+  // Also check the stock is currently above the SMA (trend still intact)
+  if(closes[n-1]<=sma150[n-1])return null;
+
+  // Check we haven't had a sustained break-below since the cross
+  let brokenBelow=0;
+  for(let j=lastCrossIdx;j<n;j++){
+    if(closes[j]<sma150[j])brokenBelow++;
+    else brokenBelow=0;
+    if(brokenBelow>=10)return null;  // broke below for 10+ days = not a valid active breakout
+  }
+
+  return n-1-lastCrossIdx;           // trading days since breakout
+}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function fmt(n,d=2){return(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function fmtPct(n){return(n>=0?'+':'')+fmt(n,1)+'%'}
@@ -229,15 +437,25 @@ function processStock(ticker,info,hist){
   if(!cl||cl<0.01)return null;
 
   // Returns
+  const ret1w=n>=6?(cl/closes[n-6]-1)*100:0;
   const ret1m=n>=21?(cl/closes[n-21]-1)*100:0;
   const ret3m=n>=63?(cl/closes[n-63]-1)*100:0;
   const ret6m=n>=126?(cl/closes[n-126]-1)*100:0;
+  const ret9m=n>=189?(cl/closes[n-189]-1)*100:0;
   const ret12m=n>=252?(cl/closes[n-252]-1)*100:(n>=200?(cl/closes[0]-1)*100:0);
   const rsRaw=ret12m*0.40+ret6m*0.25+ret3m*0.20+ret1m*0.15;
+  // Emerging composite — weights short-term windows heavily (spots new uptrends)
+  const rsEmerging=ret1w*0.30+ret1m*0.30+ret3m*0.25+ret6m*0.15;
+  // Confirmed composite — balanced across windows up to 9m (skips 12m so very-old trends don't dominate)
+  const rsConfirmed=ret1w*0.15+ret1m*0.25+ret3m*0.30+ret6m*0.20+ret9m*0.10;
 
   // EMAs
   const e21arr=ema(closes,21),e50arr=ema(closes,50),e200arr=ema(closes,200);
   const e21=e21arr[n-1],e50=e50arr[n-1],e200=e200arr[n-1];
+
+  // 150-SMA (30-week) for Weinstein Stage Analysis
+  const sma150arr=sma(closes,150);
+  const daysSinceBreakout=daysSinceBaseBreakout(closes,sma150arr);
 
   // RSI
   const rsiArr=rsi(closes,14);const rsiVal=rsiArr[rsiArr.length-1]||50;
@@ -282,17 +500,23 @@ function processStock(ticker,info,hist){
     }
   }
 
+  // Industry/sector — Finviz override map takes precedence if available
+  const fv=finvizMap[ticker];
+  const resolvedSector=(fv&&fv.sector)||info.sector||'';
+  const resolvedIndustry=(fv&&fv.industry)||info.industry||'Unknown';
+
   return{
     ticker,
     name:info.companyName||info.name||ticker,
     exchange:info.exchangeShortName||info.exchange||'',
-    sector:info.sector||'',
-    industry:info.industry||'Unknown',
+    sector:resolvedSector,
+    industry:resolvedIndustry,
     price:cl,
     marketCap:info.marketCap||0,
     avgVol:vol20,
-    ret1m,ret3m,ret6m,ret12m,rsRaw,
+    ret1w,ret1m,ret3m,ret6m,ret9m,ret12m,rsRaw,rsEmerging,rsConfirmed,
     rsScore:0,industryRS:0,indMedian:0,
+    daysSinceBreakout,
     trendValid,trendScore:ts,
     rsiVal,pct21,pct50,pct50H,
     range10,range20,range50,volRatio,
@@ -321,6 +545,45 @@ function calcIndustryRS(results){
   results.forEach(r=>{r.industryRS=ranks[r.industry]||0;r.indMedian=medians[r.industry]||0});
 }
 
+// Industry-level aggregate stats — for the Givens-style table.
+// Computes median return per time window, breadth (% trend-valid), and composite scores.
+let industryStats=[];
+function calcIndustryStats(results){
+  const MIN_STOCKS=3; // skip industries with <3 members — too noisy
+  const byInd={};
+  results.forEach(r=>{
+    if(!byInd[r.industry])byInd[r.industry]={industry:r.industry,sector:r.sector||'',stocks:[]};
+    byInd[r.industry].stocks.push(r);
+  });
+  const median=arr=>{
+    if(arr.length===0)return 0;
+    const s=[...arr].sort((a,b)=>a-b);
+    const m=Math.floor(s.length/2);
+    return s.length%2===0?(s[m-1]+s[m])/2:s[m];
+  };
+  industryStats=Object.values(byInd)
+    .filter(g=>g.stocks.length>=MIN_STOCKS&&g.industry&&g.industry!=='Unknown')
+    .map(g=>{
+      const stocks=g.stocks;
+      const validCount=stocks.filter(s=>s.trendValid).length;
+      return{
+        industry:g.industry,
+        sector:g.sector,
+        count:stocks.length,
+        breadth:Math.round((validCount/stocks.length)*100),
+        ret1w:median(stocks.map(s=>s.ret1w)),
+        ret1m:median(stocks.map(s=>s.ret1m)),
+        ret3m:median(stocks.map(s=>s.ret3m)),
+        ret6m:median(stocks.map(s=>s.ret6m)),
+        ret9m:median(stocks.map(s=>s.ret9m)),
+        ret12m:median(stocks.map(s=>s.ret12m)),
+        rsEmerging:median(stocks.map(s=>s.rsEmerging)),
+        rsConfirmed:median(stocks.map(s=>s.rsConfirmed)),
+        rsRank:stocks.length>0?stocks[0].industryRS:0,
+      };
+    });
+}
+
 // Live scan log
 let scanLog=[];
 function log(msg,type='info'){
@@ -341,6 +604,20 @@ async function fetchUniverse(){
     {name:'stable company-screener',url:`https://financialmodelingprep.com/stable/company-screener?exchange=NYSE,NASDAQ&priceMoreThan=2&limit=10000&apikey=${FMP_KEY}`},
     {name:'stable stock-screener',url:`https://financialmodelingprep.com/stable/stock-screener?exchange=NYSE,NASDAQ&limit=10000&apikey=${FMP_KEY}`}
   ];
+
+  // Non-equity wrappers to exclude from the universe entirely.
+  // Rationale: these distort RS rankings (thousands of mutual fund share classes
+  // flood the distribution) and aren't investable under a concentrated single-name thesis.
+  // Checked against both FMP and Finviz industry labels where available.
+  const EXCLUDED_INDUSTRIES=[
+    'Asset Management','Asset Management - Global','Asset Management - Income',
+    'Closed-End Fund - Debt','Closed-End Fund - Equity','Closed-End Fund - Foreign',
+    'Closed-End Fund - Income','Closed-End Fund - Other',
+    'Exchange Traded Fund','Shell Companies',
+  ];
+  const excludedSet=new Set(EXCLUDED_INDUSTRIES.map(s=>s.toLowerCase().replace(/[—–-]/g,'-').trim()));
+  const normInd=s=>(s||'').toLowerCase().replace(/[—–-]/g,'-').trim();
+
   for(const ep of endpoints){
     try{
       log(`Trying ${ep.name}...`);
@@ -351,11 +628,32 @@ async function fetchUniverse(){
       const arr=Array.isArray(data)?data:(data.data||data.results||[]);
       if(arr.length===0){log(`${ep.name} returned empty`,'warn');continue}
       log(`${ep.name} OK — ${arr.length} raw stocks`,'ok');
-      const filtered=arr.filter(s=>{
+
+      // First pass — basic ticker/price sanity
+      let filtered=arr.filter(s=>{
         const sym=s.symbol||s.ticker||'';
         const price=s.price||s.lastPrice||0;
         return price>=2 && sym && !sym.includes('.') && !sym.includes('-') && !sym.includes('/');
       });
+      const before=filtered.length;
+
+      // Second pass — exclude non-equity wrappers at source.
+      // Uses Finviz industry if mapped (more accurate), falls back to FMP industry.
+      const hasFinviz=Object.keys(finvizMap).length>0;
+      filtered=filtered.filter(s=>{
+        const sym=(s.symbol||s.ticker||'').toUpperCase();
+        // Mutual fund share class heuristic: 5-letter ticker ending in X.
+        // Catches VDADX, MDIZX etc. Rare false positives (SPGX, ARKX); worth the noise reduction.
+        if(/^[A-Z]{4}X$/.test(sym))return false;
+        // Resolve industry — Finviz first if available, else FMP
+        const fvInd=hasFinviz&&finvizMap[sym]?finvizMap[sym].industry:null;
+        const industry=fvInd||s.industry||'';
+        if(excludedSet.has(normInd(industry)))return false;
+        return true;
+      });
+      const after=filtered.length;
+      log(`Filtered non-equity wrappers: ${before}→${after} (removed ${before-after} funds/CEFs/ETFs/shells)${hasFinviz?' using Finviz industry map':' using FMP industries only — import Finviz CSV for stricter filtering'}`,hasFinviz?'ok':'warn');
+
       // Normalize field names
       return filtered.map(s=>({
         symbol:s.symbol||s.ticker,
@@ -528,6 +826,7 @@ async function runScan(testLimit=0){
     setProgress('Calculating RS rankings across full universe...',total,total,'');
     calcRS(results);
     calcIndustryRS(results);
+    calcIndustryStats(results);
     scanResults=results;
     scanMeta.lastRun=new Date().toISOString();
     saveScreener();
@@ -610,6 +909,33 @@ function getFiltered(){
     if(screenerFilter.minInstOwn)d=d.filter(r=>r.instOwn!=null&&r.instOwn>=screenerFilter.minInstOwn);
     if(screenerFilter.minDaysToEarnings)d=d.filter(r=>r.daysToEarnings!=null&&r.daysToEarnings>=screenerFilter.minDaysToEarnings);
   }
+  // Stage 1→2 transition filters — finds emerging leaders before they're obvious.
+  // Signal we're after: dead for a year, just turned up, RS in the 60-85 range, fresh base breakout.
+  if(screenerFilter.stage12){
+    if(screenerFilter.max12m!=null)d=d.filter(r=>r.ret12m<=screenerFilter.max12m);
+    if(screenerFilter.min1m!=null)d=d.filter(r=>r.ret1m>=screenerFilter.min1m);
+    if(screenerFilter.maxDaysBreakout!=null)d=d.filter(r=>r.daysSinceBreakout!=null&&r.daysSinceBreakout<=screenerFilter.maxDaysBreakout);
+    if(screenerFilter.maxRS!=null)d=d.filter(r=>r.rsScore<=screenerFilter.maxRS);
+    // Exclude non-equity wrappers — mutual funds, CEFs, ETFs, asset-manager fund products.
+    // These are not investable under a concentrated single-name thesis.
+    if(screenerFilter.excludeFunds!==false){
+      const JUNK_INDUSTRIES=[
+        'Asset Management','Asset Management - Global','Asset Management - Income',
+        'Closed-End Fund - Debt','Closed-End Fund - Equity','Closed-End Fund - Foreign',
+        'Closed-End Fund - Income','Closed-End Fund - Other',
+        'Exchange Traded Fund','Shell Companies','Mortgage Finance',
+      ];
+      const junkSet=new Set(JUNK_INDUSTRIES.map(s=>s.toLowerCase().replace(/[—–-]/g,'-').trim()));
+      d=d.filter(r=>{
+        const ind=(r.industry||'').toLowerCase().replace(/[—–-]/g,'-').trim();
+        if(junkSet.has(ind))return false;
+        // Mutual fund share classes: 5-letter ticker ending in X (e.g. VDADX, MDIZX).
+        // Catches ~95% of mutual fund noise. False positives are rare (ARKX, SPGX etc.).
+        if(/^[A-Z]{4}X$/.test(r.ticker))return false;
+        return true;
+      });
+    }
+  }
   // Sub-tab filter
   if(screenerSubTab==='setups')d=d.filter(r=>r.setup!=='None');
   else if(screenerSubTab==='vcp')d=d.filter(r=>r.setup==='VCP');
@@ -640,6 +966,7 @@ function render(){
   switch(currentTab){
     case'screener':c.innerHTML=renderScreener();break;
     case'industry':c.innerHTML=renderIndustry();break;
+    case'alignment':c.innerHTML=renderAlignment();break;
     case'journal':c.innerHTML=renderJournal();break;
     case'stats':c.innerHTML=renderStats();break;
   }
@@ -697,7 +1024,7 @@ ${scanRunning||scanLog.length>0?`
 <div class="filter-group"><label>Min Price $</label><input type="number" value="${screenerFilter.minPrice}" onchange="screenerFilter.minPrice=+this.value;render()"></div>
 <div class="filter-group"><label>Max Price $</label><input type="number" value="${screenerFilter.maxPrice}" placeholder="0=any" onchange="screenerFilter.maxPrice=+this.value;render()"></div>
 <div class="filter-group"><label>Min Mcap $M</label><input type="number" value="${screenerFilter.minMcap}" placeholder="0=any" onchange="screenerFilter.minMcap=+this.value;render()"></div>
-<div class="filter-group"><label><input type="checkbox" ${screenerFilter.trendOnly?'checked':''} onchange="screenerFilter.trendOnly=this.checked;render()"> Trend Only</label></div>
+<div class="filter-group" style="margin-left:auto"><button onclick="resetAllFilters()" style="padding:6px 12px;background:#ff6b6b22;border:1px solid #ff6b6b;color:#ff6b6b;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px" title="Clears ALL filters — shows every stock in the universe">Reset All Filters</button></div>
 </div>
 
 <div class="filter-bar" style="background:${screenerFilter.canslim?'rgba(0,200,150,.05)':'var(--bg2)'};border-color:${screenerFilter.canslim?'var(--green)':'var(--border)'}">
@@ -709,6 +1036,18 @@ ${scanRunning||scanLog.length>0?`
 <div class="filter-group"><label>I: Min Inst Own %</label><input type="number" value="${screenerFilter.minInstOwn}" placeholder="0=any" onchange="screenerFilter.minInstOwn=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
 <div class="filter-group"><label>Earn buffer (days)</label><input type="number" value="${screenerFilter.minDaysToEarnings}" placeholder="5" onchange="screenerFilter.minDaysToEarnings=+this.value;render()" ${!screenerFilter.canslim?'disabled':''}></div>
 </div>
+
+<div class="filter-bar" style="background:${screenerFilter.stage12?'rgba(100,180,255,.07)':'var(--bg2)'};border-color:${screenerFilter.stage12?'#6bb4ff':'var(--border)'}">
+<div class="filter-group"><label style="color:${screenerFilter.stage12?'#6bb4ff':'var(--text2)'};font-weight:600" title="Finds late Stage 1 / early Stage 2 names — dead money for a year that just broke out above the 30-week MA.">Stage 1→2 <input type="checkbox" ${screenerFilter.stage12?'checked':''} onchange="screenerFilter.stage12=this.checked;render()"></label></div>
+<div class="filter-group"><label>Max 12M %</label><input type="number" value="${screenerFilter.max12m==null?'':screenerFilter.max12m}" placeholder="30" onchange="screenerFilter.max12m=this.value===''?null:+this.value;render()" ${!screenerFilter.stage12?'disabled':''}></div>
+<div class="filter-group"><label>Min 1M %</label><input type="number" value="${screenerFilter.min1m==null?'':screenerFilter.min1m}" placeholder="5" onchange="screenerFilter.min1m=this.value===''?null:+this.value;render()" ${!screenerFilter.stage12?'disabled':''}></div>
+<div class="filter-group"><label title="Trading days since price first closed above 30-week SMA from below, sustained for 5+ days. Fresh breakouts = lower number.">Max Days Since Breakout</label><input type="number" value="${screenerFilter.maxDaysBreakout==null?'':screenerFilter.maxDaysBreakout}" placeholder="60" onchange="screenerFilter.maxDaysBreakout=this.value===''?null:+this.value;render()" ${!screenerFilter.stage12?'disabled':''}></div>
+<div class="filter-group"><label title="Keeps RS capped so you find leaders-in-waiting, not established leaders.">Max RS</label><input type="number" value="${screenerFilter.maxRS==null?'':screenerFilter.maxRS}" placeholder="85" onchange="screenerFilter.maxRS=this.value===''?null:+this.value;render()" ${!screenerFilter.stage12?'disabled':''}></div>
+<div class="filter-group"><label title="Exclude mutual funds, closed-end funds, ETFs, shell companies, asset management wrappers. Catches mutual-fund-style tickers (5-letter ending in X). Recommended ON.">Exclude Funds <input type="checkbox" ${screenerFilter.excludeFunds!==false?'checked':''} onchange="screenerFilter.excludeFunds=this.checked;render()" ${!screenerFilter.stage12?'disabled':''}></label></div>
+<div class="filter-group"><button onclick="applyStage12Preset()" style="padding:6px 12px;background:#6bb4ff22;border:1px solid #6bb4ff;color:#6bb4ff;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px">Apply Stage 1→2 Preset</button></div>
+</div>
+
+${(()=>{const parts=activeFiltersSummary();return parts.length===0?`<div style="padding:6px 10px;margin:6px 0;font-size:10px;color:var(--text2);background:var(--bg2);border-radius:3px">No filters active · showing all ${scanResults.length} stocks</div>`:`<div style="padding:6px 10px;margin:6px 0;font-size:10px;color:var(--text);background:rgba(100,180,255,.05);border:1px solid rgba(100,180,255,.2);border-radius:3px"><span style="color:var(--text2)">Active filters:</span> ${parts.join(' · ')} <span style="color:var(--text2);float:right">→ ${filtered.length} / ${scanResults.length} stocks pass</span></div>`})()}
 
 <div class="sub-tabs">
 ${[['setups','Setups ('+filtered.filter(r=>r.setup!=='None').length+')'],['vcp','VCP'],['pullback','Pullback'],['all','All Filtered']].map(([k,l])=>`<div class="sub-tab ${screenerSubTab===k?'active':''}" onclick="screenerSubTab='${k}';render()">${l}</div>`).join('')}
@@ -729,6 +1068,7 @@ ${sortTh('rsiVal','RSI')}
 ${sortTh('ret1m','1M')}
 ${sortTh('ret3m','3M')}
 ${sortTh('ret12m','12M')}
+${screenerFilter.stage12?sortTh('daysSinceBreakout','Days Since BO'):''}
 ${sortTh('price','Price')}
 ${screenerFilter.canslim?`${sortTh('epsGrowthQ','EPS Q')}${sortTh('epsGrowthA','EPS 3yr')}${sortTh('pct50H','%Hi')}${sortTh('floatM','Float M')}${sortTh('instOwn','Inst%')}${sortTh('daysToEarnings','Earn')}`:''}
 </tr>
@@ -744,6 +1084,7 @@ ${filtered.slice(0,500).map(r=>`<tr>
 <td style="color:${r.ret1m>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmtPct(r.ret1m)}</td>
 <td style="color:${r.ret3m>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmtPct(r.ret3m)}</td>
 <td style="color:${r.ret12m>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmtPct(r.ret12m)}</td>
+${screenerFilter.stage12?`<td style="font-weight:600;color:${r.daysSinceBreakout==null?'var(--text2)':r.daysSinceBreakout<=30?'var(--green)':r.daysSinceBreakout<=60?'var(--amber)':'var(--text)'}" title="Trading days since last confirmed cross above 30-week SMA">${r.daysSinceBreakout==null?'—':r.daysSinceBreakout+'d'}</td>`:''}
 <td style="color:var(--white)">$${fmt(r.price,2)}</td>
 ${screenerFilter.canslim?`
 <td style="color:${(r.epsGrowthQ||0)>=25?'var(--green)':(r.epsGrowthQ||0)>=0?'var(--text)':'var(--red)'}">${r.epsGrowthQ!=null?fmtPct(r.epsGrowthQ):'<span style="color:var(--text2)">—</span>'}</td>
@@ -761,54 +1102,436 @@ ${filtered.length>500?`<div style="text-align:center;padding:10px;font-size:10px
 
 function renderIndustry(){
   if(scanResults.length===0)return'<div class="empty">Run scan first</div>';
-  // Group by industry, sort by industryRS desc
-  const map={};
-  scanResults.forEach(r=>{
-    if(!map[r.industry])map[r.industry]={industry:r.industry,sector:r.sector,indRS:r.industryRS,stocks:[]};
-    map[r.industry].stocks.push(r);
-  });
-  const industries=Object.values(map).sort((a,b)=>b.indRS-a.indRS);
+  if(industryStats.length===0)calcIndustryStats(scanResults);
+  if(industryStats.length===0)return'<div class="empty">No industries with ≥3 stocks found.</div>';
 
-  return`<div style="margin-bottom:12px;font-size:10px;color:var(--text2)">${industries.length} industries ranked by median RS of constituent stocks</div>
-<div class="industry-grid">
-${industries.map(ind=>{
-  const vcps=ind.stocks.filter(s=>s.setup==='VCP').length;
-  const pbs=ind.stocks.filter(s=>s.setup==='Pullback').length;
-  const top3=ind.stocks.sort((a,b)=>b.rsScore-a.rsScore).slice(0,3);
-  const isOpen=industryExpanded[ind.industry];
-  return`<div class="industry-row">
-<div class="industry-head" onclick="industryExpanded['${ind.industry}']=!industryExpanded['${ind.industry}'];render()">
-<div>
-<span class="industry-name">${ind.industry}</span>
-<span style="font-size:10px;color:var(--text2);margin-left:8px">${ind.sector}</span>
-</div>
-<div class="industry-meta">
-<span>Ind RS: <strong style="color:${rsColor(ind.indRS).replace('rs-hi','var(--green)').replace('rs-mid','var(--amber)').replace('rs-lo','var(--red)')}">${ind.indRS}</strong></span>
-<span>${ind.stocks.length} stocks</span>
-${vcps>0?`<span style="color:var(--blue)">${vcps} VCP</span>`:''}
-${pbs>0?`<span style="color:var(--green)">${pbs} PB</span>`:''}
-<span style="color:var(--text2)">${isOpen?'▲':'▼'}</span>
-</div>
-</div>
-${isOpen?`<div class="industry-body open">
-<div style="font-size:10px;color:var(--text2);margin-bottom:6px">Top 3: ${top3.map(s=>`<strong style="color:var(--white)">${s.ticker}</strong> (RS ${s.rsScore})`).join(' · ')}</div>
-<div class="table-wrap"><table>
-<tr><th>Ticker</th><th>Name</th><th>RS</th><th>Trend</th><th>Setup</th><th>RSI</th><th>12M</th><th>Price</th></tr>
-${ind.stocks.sort((a,b)=>b.rsScore-a.rsScore).slice(0,20).map(r=>`<tr>
-<td class="ticker-cell">${r.ticker}</td>
-<td class="name-cell">${r.name}</td>
-<td><span class="${rsColor(r.rsScore)}">${r.rsScore}</span></td>
-<td style="color:${r.trendValid?'var(--green)':'var(--text2)'}">${r.trendScore}/10</td>
-<td>${setupBadge(r.setup)}</td>
-<td>${r.rsiVal.toFixed(0)}</td>
-<td style="color:${r.ret12m>=0?'var(--green)':'var(--red)'}">${fmtPct(r.ret12m)}</td>
-<td>$${fmt(r.price,2)}</td>
-</tr>`).join('')}
-</table></div>
-${ind.stocks.length>20?`<div style="font-size:10px;color:var(--text2);padding:8px">+${ind.stocks.length-20} more stocks in this industry</div>`:''}
-</div>`:''}`}).join('')}
-</div>`;
+  const sorted=[...industryStats].sort((a,b)=>{
+    const av=a[industrySortCol]||0, bv=b[industrySortCol]||0;
+    return industrySortDir==='desc'?bv-av:av-bv;
+  });
+
+  // Colour the cell green/amber/red based on how it compares to other industries in that column
+  const allValues={};
+  ['ret1w','ret1m','ret3m','ret6m','ret9m','ret12m','rsEmerging','rsConfirmed','breadth'].forEach(col=>{
+    allValues[col]=industryStats.map(i=>i[col]||0).sort((a,b)=>a-b);
+  });
+  const pctileColor=(col,val)=>{
+    const arr=allValues[col];if(!arr||arr.length<3)return'';
+    const idx=arr.findIndex(v=>v>=val);
+    const pct=idx<0?100:(idx/arr.length)*100;
+    if(val<=0)return'color:var(--red)';
+    if(pct>=67)return'color:var(--green)';
+    if(pct>=33)return'color:var(--amber)';
+    return'color:var(--text2)';
+  };
+
+  const colHead=(key,label,tooltip)=>{
+    const isSort=industrySortCol===key;
+    const arrow=isSort?(industrySortDir==='desc'?' ▼':' ▲'):'';
+    return`<th class="sortable" onclick="setIndustrySort('${key}')" title="${tooltip||''}" style="cursor:pointer;${isSort?'color:var(--accent)':''}">${label}${arrow}</th>`;
+  };
+
+  const formatPct=v=>(v>=0?'+':'')+v.toFixed(1)+'%';
+  const formatComposite=v=>(v>=0?'+':'')+v.toFixed(1);
+
+  const finvizBar=finvizMeta.count>0
+    ?`<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:4px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;font-size:11px">
+      <div><span style="color:var(--green);font-weight:600">Finviz industries active</span> <span style="color:var(--text2)">· ${finvizMeta.count} tickers mapped · imported ${new Date(finvizMeta.imported).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}</span></div>
+      <div style="display:flex;gap:8px">
+        <label style="font-size:10px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:3px;cursor:pointer">Re-import<input type="file" accept=".csv" onchange="importFinvizCSV(event)" style="display:none"></label>
+        <button onclick="clearFinvizMap()" style="font-size:10px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--red);border-radius:3px;cursor:pointer">Clear</button>
+      </div>
+    </div>`
+    :`<div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:4px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;font-size:11px">
+      <div><span style="color:var(--amber);font-weight:600">Using FMP industries</span> <span style="color:var(--text2)">· Import a Finviz CSV for cleaner categorisation (GEV → Specialty Industrial Machinery, VST/TLN/CEG grouped in Utilities-IPP, etc.)</span></div>
+      <label style="font-size:10px;padding:4px 10px;background:var(--accent);border:none;color:#000;border-radius:3px;cursor:pointer;font-weight:600">Import Finviz CSV<input type="file" accept=".csv" onchange="importFinvizCSV(event)" style="display:none"></label>
+    </div>`;
+
+  return`${finvizBar}
+  <div style="margin-bottom:12px;font-size:10px;color:var(--text2)">
+    ${industryStats.length} industries (≥3 stocks) · sorted by <strong style="color:var(--accent)">${industrySortCol}</strong> ${industrySortDir} · click column header to sort · click row for constituents
+  </div>
+  <div class="table-wrap"><table class="industry-table">
+    <thead><tr>
+      <th style="text-align:left">Industry</th>
+      ${colHead('count','#','Number of stocks in this industry')}
+      ${colHead('breadth','Breadth','% of stocks with valid uptrend (above 50EMA > 200EMA, Stage 2 proxy)')}
+      ${colHead('ret1w','1W','Median 1-week return')}
+      ${colHead('ret1m','1M','Median 1-month return')}
+      ${colHead('ret3m','3M','Median 3-month return')}
+      ${colHead('ret6m','6M','Median 6-month return')}
+      ${colHead('ret9m','9M','Median 9-month return')}
+      ${colHead('ret12m','12M','Median 12-month return')}
+      ${colHead('rsEmerging','Emerging','30% 1w + 30% 1m + 25% 3m + 15% 6m — highlights new uptrends')}
+      ${colHead('rsConfirmed','Confirmed','15% 1w + 25% 1m + 30% 3m + 20% 6m + 10% 9m — balanced across confirmed windows')}
+    </tr></thead><tbody>
+  ${sorted.map(ind=>{
+    const isOpen=industryExpanded[ind.industry];
+    const topStocks=scanResults
+      .filter(s=>s.industry===ind.industry)
+      .sort((a,b)=>b.rsConfirmed-a.rsConfirmed)
+      .slice(0,20);
+    const breadthColor=ind.breadth>=60?'var(--green)':ind.breadth>=40?'var(--amber)':'var(--red)';
+    return`<tr class="industry-row-table" onclick="industryExpanded['${ind.industry.replace(/'/g,"\\'")}']=!industryExpanded['${ind.industry.replace(/'/g,"\\'")}'];render()" style="cursor:pointer">
+      <td style="text-align:left;font-weight:600;color:var(--white)">
+        ${isOpen?'▼':'▶'} ${ind.industry}
+        <span style="font-size:10px;color:var(--text2);margin-left:6px;font-weight:400">${ind.sector}</span>
+      </td>
+      <td>${ind.count}</td>
+      <td style="color:${breadthColor};font-weight:600">${ind.breadth}%</td>
+      <td style="${pctileColor('ret1w',ind.ret1w)}">${formatPct(ind.ret1w)}</td>
+      <td style="${pctileColor('ret1m',ind.ret1m)}">${formatPct(ind.ret1m)}</td>
+      <td style="${pctileColor('ret3m',ind.ret3m)}">${formatPct(ind.ret3m)}</td>
+      <td style="${pctileColor('ret6m',ind.ret6m)}">${formatPct(ind.ret6m)}</td>
+      <td style="${pctileColor('ret9m',ind.ret9m)}">${formatPct(ind.ret9m)}</td>
+      <td style="${pctileColor('ret12m',ind.ret12m)}">${formatPct(ind.ret12m)}</td>
+      <td style="${pctileColor('rsEmerging',ind.rsEmerging)};font-weight:600">${formatComposite(ind.rsEmerging)}</td>
+      <td style="${pctileColor('rsConfirmed',ind.rsConfirmed)};font-weight:600">${formatComposite(ind.rsConfirmed)}</td>
+    </tr>
+    ${isOpen?`<tr class="industry-drill"><td colspan="11" style="background:var(--bg);padding:0">
+      <div style="padding:14px 20px;border-left:3px solid var(--accent);margin:4px 0">
+        <div style="font-size:10px;color:var(--text2);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">Top ${Math.min(topStocks.length,20)} constituents by Confirmed RS</div>
+        <table style="width:100%;font-size:11px">
+          <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px 4px">Ticker</th>
+            <th style="text-align:left;padding:6px 4px">Name</th>
+            <th style="text-align:right;padding:6px 4px">RS</th>
+            <th style="text-align:right;padding:6px 4px">Trend</th>
+            <th style="text-align:right;padding:6px 4px">1W</th>
+            <th style="text-align:right;padding:6px 4px">1M</th>
+            <th style="text-align:right;padding:6px 4px">3M</th>
+            <th style="text-align:right;padding:6px 4px">6M</th>
+            <th style="text-align:right;padding:6px 4px">12M</th>
+            <th style="text-align:right;padding:6px 4px">Setup</th>
+            <th style="text-align:right;padding:6px 4px">Price</th>
+          </tr></thead><tbody>
+          ${topStocks.map(s=>`<tr>
+            <td style="padding:6px 4px;font-weight:700;color:var(--white)">${s.ticker}</td>
+            <td style="padding:6px 4px;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name||''}</td>
+            <td style="padding:6px 4px;text-align:right"><span class="${rsColor(s.rsScore)}">${s.rsScore}</span></td>
+            <td style="padding:6px 4px;text-align:right;color:${s.trendValid?'var(--green)':'var(--text2)'}">${s.trendScore}/10</td>
+            <td style="padding:6px 4px;text-align:right;color:${s.ret1w>=0?'var(--green)':'var(--red)'}">${formatPct(s.ret1w||0)}</td>
+            <td style="padding:6px 4px;text-align:right;color:${s.ret1m>=0?'var(--green)':'var(--red)'}">${formatPct(s.ret1m)}</td>
+            <td style="padding:6px 4px;text-align:right;color:${s.ret3m>=0?'var(--green)':'var(--red)'}">${formatPct(s.ret3m)}</td>
+            <td style="padding:6px 4px;text-align:right;color:${s.ret6m>=0?'var(--green)':'var(--red)'}">${formatPct(s.ret6m)}</td>
+            <td style="padding:6px 4px;text-align:right;color:${s.ret12m>=0?'var(--green)':'var(--red)'}">${formatPct(s.ret12m)}</td>
+            <td style="padding:6px 4px;text-align:right">${setupBadge(s.setup)}</td>
+            <td style="padding:6px 4px;text-align:right;color:var(--white)">$${fmt(s.price,2)}</td>
+          </tr>`).join('')}
+        </tbody></table>
+      </div>
+    </td></tr>`:''}`;
+  }).join('')}
+  </tbody></table></div>`;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ALIGNMENT — map your themes to FMP industries, derive verdicts per theme,
+// surface top 3 themes for deployment this week
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Theme → FMP industry names mapping. These are the industries I'd expect to
+// validate each theme, using FMP's actual labelling conventions. Editable via
+// the UI — if you see an industry in the scan that I've missed here, add it.
+const DEFAULT_THEME_INDUSTRIES={
+  ai:{
+    label:'AI Infrastructure',
+    thesis:'Picks-and-shovels AI capex supercycle. Semis + data centre software.',
+    industries:['Semiconductors','Semiconductor Equipment & Materials','Software - Infrastructure','Information Technology Services']
+  },
+  power:{
+    label:'Power & Nuclear',
+    thesis:'AI power demand + uranium supply deficit + grid buildout. GEV, VST, TLN, CEG, CCJ, OKLO, SMR etc.',
+    industries:['Utilities - Regulated Electric','Utilities - Independent Power Producers','Utilities - Diversified','Utilities - Renewable','Uranium','Electrical Equipment & Parts','Specialty Industrial Machinery']
+  },
+  copper:{
+    label:'Copper & Critical Metals',
+    thesis:'Copper deficit from 2029 + electrification + rare earths.',
+    industries:['Copper','Other Industrial Metals & Mining','Aluminum','Steel']
+  },
+  defence:{
+    label:'European Defence',
+    thesis:'NATO 5% GDP by 2035. US-listed proxies only in this scan.',
+    industries:['Aerospace & Defense']
+  },
+  space:{
+    label:'Space Economy',
+    thesis:'RKLB (Aerospace), ASTS (Communication Equipment), launch + direct-to-cell.',
+    industries:['Aerospace & Defense','Communication Equipment']
+  },
+  japan:{
+    label:'Japan',
+    thesis:'BoJ normalisation cycle. EWJ as proxy — not in US stock scan universe.',
+    industries:[],
+    note:'Japan has no backing in US-equity scan. Watch EWJ and DXJ separately. Proxy ticker support coming.'
+  },
+  gold:{
+    label:'Gold (Ballast)',
+    thesis:'Central bank bid + tail-risk insurance. Miners give leverage.',
+    industries:['Gold','Other Precious Metals & Mining','Silver']
+  }
+};
+
+// User overrides persisted to localStorage. Versioned so breaking changes
+// (e.g. Finviz-taxonomy migration) can force a refresh from defaults.
+const THEME_MAPPING_VERSION=2;
+let themeIndustries=(()=>{
+  try{
+    const savedVersion=parseInt(localStorage.getItem('velox_eq_theme_industries_v'))||0;
+    const saved=localStorage.getItem('velox_eq_theme_industries');
+    if(saved&&savedVersion>=THEME_MAPPING_VERSION)return JSON.parse(saved);
+    // Version older than current → reseed. User's custom edits lost here, but
+    // that's acceptable for the Finviz taxonomy migration — the old names don't match anyway.
+    localStorage.setItem('velox_eq_theme_industries_v',String(THEME_MAPPING_VERSION));
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_THEME_INDUSTRIES));
+})();
+
+function saveThemeIndustries(){
+  try{
+    localStorage.setItem('velox_eq_theme_industries',JSON.stringify(themeIndustries));
+    localStorage.setItem('velox_eq_theme_industries_v',String(THEME_MAPPING_VERSION));
+  }catch(e){}
+}
+
+// Given a theme's industry list, return matched entries from industryStats
+function matchIndustries(themeCode){
+  const t=themeIndustries[themeCode];
+  if(!t||!t.industries.length)return[];
+  // Case-insensitive match, since FMP sometimes uses em-dash vs hyphen etc.
+  const normalise=s=>(s||'').toLowerCase().replace(/[—–-]/g,'-').replace(/\s+/g,' ').trim();
+  const wanted=new Set(t.industries.map(normalise));
+  return industryStats.filter(ind=>wanted.has(normalise(ind.industry)));
+}
+
+// Derive a conviction score for a theme based on its backing industries.
+// Output: {score: 0-100, verdict: "flowing"|"watch"|"wait"|"fading"|"nodata", reasons: []}
+function themeConviction(themeCode){
+  const matches=matchIndustries(themeCode);
+  if(matches.length===0)return{score:0,verdict:'nodata',reasons:['No backing industries found in scan'],matches:[]};
+
+  // Take the best-performing backing industry (max Confirmed score)
+  // but weight by breadth — a narrow uptrend deserves less conviction
+  const scored=matches.map(m=>{
+    const breadthFactor=m.breadth/100;
+    const weightedConfirmed=m.rsConfirmed*breadthFactor;
+    const weightedEmerging=m.rsEmerging*breadthFactor;
+    return{...m,weightedConfirmed,weightedEmerging};
+  }).sort((a,b)=>b.weightedConfirmed-a.weightedConfirmed);
+
+  const best=scored[0];
+  const avgEmerging=matches.reduce((s,m)=>s+m.rsEmerging,0)/matches.length;
+  const avgConfirmed=matches.reduce((s,m)=>s+m.rsConfirmed,0)/matches.length;
+  const avgBreadth=matches.reduce((s,m)=>s+m.breadth,0)/matches.length;
+
+  const reasons=[];
+  let verdict='wait';
+
+  // FLOWING IN: strong confirmed + strong emerging + decent breadth
+  if(best.rsConfirmed>=15&&best.rsEmerging>=10&&best.breadth>=50){
+    verdict='flowing';
+    reasons.push(`${best.industry}: ${best.rsConfirmed.toFixed(0)} confirmed / ${best.rsEmerging.toFixed(0)} emerging / ${best.breadth}% breadth`);
+  }
+  // FADING: confirmed still positive but emerging rolling over
+  else if(best.rsConfirmed>=10&&best.rsEmerging<0){
+    verdict='fading';
+    reasons.push(`${best.industry}: confirmed +${best.rsConfirmed.toFixed(0)} but emerging turning negative (${best.rsEmerging.toFixed(0)})`);
+  }
+  // WATCH: positive but mixed or insufficient breadth
+  else if(best.rsConfirmed>=8||(best.rsEmerging>=5&&best.breadth>=40)){
+    verdict='watch';
+    reasons.push(`${best.industry}: mixed signal — confirmed ${best.rsConfirmed.toFixed(0)}, emerging ${best.rsEmerging.toFixed(0)}, breadth ${best.breadth}%`);
+  }
+  // WAIT: weak
+  else{
+    verdict='wait';
+    reasons.push(`${best.industry}: weak — confirmed ${best.rsConfirmed.toFixed(0)}, breadth ${best.breadth}%`);
+  }
+
+  // Composite conviction score (0-100, arbitrary scale for ranking themes)
+  const score=Math.max(0,Math.min(100,(best.rsConfirmed*2)+(best.rsEmerging*1.5)+(best.breadth*0.5)));
+
+  return{score,verdict,reasons,matches:scored,best,avgEmerging,avgConfirmed,avgBreadth};
+}
+
+// Find top candidate stocks within a theme's backing industries.
+// Filter: RS score >= 75, trend score >= 6, setup in [VCP, Pullback], trendValid
+function topCandidatesForTheme(themeCode,limit=5){
+  const matches=matchIndustries(themeCode);
+  if(matches.length===0)return[];
+  const industryNames=new Set(matches.map(m=>m.industry));
+  return scanResults
+    .filter(s=>industryNames.has(s.industry))
+    .filter(s=>s.rsScore>=75&&s.trendScore>=6&&s.trendValid)
+    .sort((a,b)=>{
+      // Prioritise clean setups
+      const setupRank=s=>s.setup==='VCP'?2:s.setup==='Pullback'?1:0;
+      const sa=setupRank(a),sb=setupRank(b);
+      if(sa!==sb)return sb-sa;
+      return b.rsScore-a.rsScore;
+    })
+    .slice(0,limit);
+}
+
+function verdictLabel(v){
+  return{flowing:'FLOWING IN',watch:'WATCH',wait:'WAIT',fading:'FADING',nodata:'NO DATA'}[v]||v.toUpperCase();
+}
+function verdictColor(v){
+  return{flowing:'var(--green)',watch:'var(--amber)',wait:'var(--text2)',fading:'var(--red)',nodata:'var(--text2)'}[v];
+}
+
+function editThemeIndustries(themeCode){
+  const t=themeIndustries[themeCode];
+  if(!t)return;
+  const current=t.industries.join(', ');
+  const next=prompt(`Industries backing "${t.label}"\n\nComma-separated. Match FMP industry names exactly (case-sensitive).\nLeave blank to remove all.\n\nCurrent: ${current||'(none)'}`,current);
+  if(next===null)return;
+  t.industries=next.split(',').map(s=>s.trim()).filter(Boolean);
+  saveThemeIndustries();
+  render();
+}
+
+function renderAlignment(){
+  if(scanResults.length===0){
+    return`<div class="empty">Run a scan first — Alignment uses industry data from the scanner.</div>`;
+  }
+  if(industryStats.length===0){
+    calcIndustryStats(scanResults);
+  }
+
+  // Score every theme, rank by conviction
+  const themes=Object.keys(themeIndustries).map(code=>({
+    code,
+    ...themeIndustries[code],
+    conviction:themeConviction(code),
+    candidates:topCandidatesForTheme(code,8)
+  }));
+
+  // Top 3 recommendations — highest conviction, excluding "nodata" and "wait" if possible
+  const ranked=[...themes].sort((a,b)=>{
+    // Flowing > watch > fading > wait > nodata
+    const rank=v=>({flowing:4,watch:3,fading:2,wait:1,nodata:0}[v]);
+    const ra=rank(a.conviction.verdict),rb=rank(b.conviction.verdict);
+    if(ra!==rb)return rb-ra;
+    return b.conviction.score-a.conviction.score;
+  });
+  const top3=ranked.slice(0,3);
+
+  return`
+  <div style="margin-bottom:20px;padding:18px 22px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px">
+    <div style="font-size:11px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-weight:600">Deploy This Week — Top 3 Themes</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      ${top3.map((t,i)=>`
+        <div style="padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:6px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+            <div style="font-size:15px;font-weight:700;color:var(--white)">${i+1}. ${t.label}</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:3px;background:${verdictColor(t.conviction.verdict)}22;color:${verdictColor(t.conviction.verdict)}">${verdictLabel(t.conviction.verdict)}</div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-bottom:10px">${t.conviction.reasons[0]||''}</div>
+          ${t.candidates.length>0?`<div style="font-size:10px;color:var(--text2);margin-bottom:4px">TOP CANDIDATES</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${t.candidates.slice(0,4).map(s=>`<span style="font-size:11px;font-weight:700;color:var(--white);background:var(--bg3);padding:3px 8px;border-radius:4px;border:1px solid var(--border)">${s.ticker}<span style="color:var(--text2);font-weight:500;margin-left:4px">RS ${s.rsScore}</span></span>`).join('')}
+          </div>`:`<div style="font-size:10px;color:var(--text2);font-style:italic">No candidates pass filter (RS≥75, trend≥6, valid uptrend)</div>`}
+        </div>
+      `).join('')}
+    </div>
+  </div>
+
+  <div style="margin-bottom:10px;font-size:10px;color:var(--text2)">
+    All themes · click row for details · click "edit" to change backing industries
+  </div>
+
+  <div class="table-wrap"><table class="industry-table">
+    <thead><tr>
+      <th style="text-align:left">Theme</th>
+      <th>Verdict</th>
+      <th>Score</th>
+      <th>Backing Industries</th>
+      <th>Avg Confirmed</th>
+      <th>Avg Emerging</th>
+      <th>Avg Breadth</th>
+      <th>Candidates</th>
+      <th></th>
+    </tr></thead><tbody>
+    ${ranked.map(t=>{
+      const c=t.conviction;
+      const isOpen=themeAlignmentExpanded[t.code];
+      return`
+      <tr class="industry-row-table" onclick="themeAlignmentExpanded['${t.code}']=!themeAlignmentExpanded['${t.code}'];render()" style="cursor:pointer">
+        <td style="text-align:left">
+          <div style="font-weight:600;color:var(--white)">${isOpen?'▼':'▶'} ${t.label}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">${t.thesis}</div>
+        </td>
+        <td><span style="font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:3px;background:${verdictColor(c.verdict)}22;color:${verdictColor(c.verdict)}">${verdictLabel(c.verdict)}</span></td>
+        <td style="font-weight:600;color:var(--white)">${c.verdict==='nodata'?'—':c.score.toFixed(0)}</td>
+        <td style="font-size:10px;color:var(--text2)">${c.matches.length===0?'<em>none matched</em>':c.matches.length+' matched'}</td>
+        <td style="color:${c.avgConfirmed>=10?'var(--green)':c.avgConfirmed>0?'var(--amber)':'var(--text2)'}">${c.matches.length>0?(c.avgConfirmed>=0?'+':'')+c.avgConfirmed.toFixed(1):'—'}</td>
+        <td style="color:${c.avgEmerging>=5?'var(--green)':c.avgEmerging>0?'var(--amber)':c.avgEmerging<0?'var(--red)':'var(--text2)'}">${c.matches.length>0?(c.avgEmerging>=0?'+':'')+c.avgEmerging.toFixed(1):'—'}</td>
+        <td style="color:${c.avgBreadth>=50?'var(--green)':c.avgBreadth>=30?'var(--amber)':'var(--red)'}">${c.matches.length>0?c.avgBreadth.toFixed(0)+'%':'—'}</td>
+        <td>${t.candidates.length}</td>
+        <td><button onclick="event.stopPropagation();editThemeIndustries('${t.code}')" style="font-size:10px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:3px;cursor:pointer">edit</button></td>
+      </tr>
+      ${isOpen?`<tr><td colspan="9" style="padding:0;background:var(--bg)">
+        <div style="padding:14px 20px;border-left:3px solid ${verdictColor(c.verdict)};margin:4px 0">
+          ${t.note?`<div style="background:var(--bg2);padding:10px 14px;border-radius:4px;margin-bottom:12px;font-size:11px;color:var(--amber);border:1px solid var(--border)">⚠ ${t.note}</div>`:''}
+
+          ${c.matches.length>0?`<div style="font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-weight:600">Backing Industries</div>
+          <table style="width:100%;font-size:11px;margin-bottom:16px">
+            <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:6px 4px">Industry</th>
+              <th style="text-align:right;padding:6px 4px">Stocks</th>
+              <th style="text-align:right;padding:6px 4px">Breadth</th>
+              <th style="text-align:right;padding:6px 4px">1W</th>
+              <th style="text-align:right;padding:6px 4px">1M</th>
+              <th style="text-align:right;padding:6px 4px">3M</th>
+              <th style="text-align:right;padding:6px 4px">Emerging</th>
+              <th style="text-align:right;padding:6px 4px">Confirmed</th>
+            </tr></thead><tbody>
+            ${c.matches.map(m=>`<tr>
+              <td style="padding:6px 4px;color:var(--white);font-weight:500">${m.industry}</td>
+              <td style="padding:6px 4px;text-align:right">${m.count}</td>
+              <td style="padding:6px 4px;text-align:right;color:${m.breadth>=60?'var(--green)':m.breadth>=40?'var(--amber)':'var(--red)'};font-weight:600">${m.breadth}%</td>
+              <td style="padding:6px 4px;text-align:right;color:${m.ret1w>=0?'var(--green)':'var(--red)'}">${(m.ret1w>=0?'+':'')+m.ret1w.toFixed(1)}%</td>
+              <td style="padding:6px 4px;text-align:right;color:${m.ret1m>=0?'var(--green)':'var(--red)'}">${(m.ret1m>=0?'+':'')+m.ret1m.toFixed(1)}%</td>
+              <td style="padding:6px 4px;text-align:right;color:${m.ret3m>=0?'var(--green)':'var(--red)'}">${(m.ret3m>=0?'+':'')+m.ret3m.toFixed(1)}%</td>
+              <td style="padding:6px 4px;text-align:right;font-weight:600;color:${m.rsEmerging>=10?'var(--green)':m.rsEmerging>=0?'var(--amber)':'var(--red)'}">${(m.rsEmerging>=0?'+':'')+m.rsEmerging.toFixed(1)}</td>
+              <td style="padding:6px 4px;text-align:right;font-weight:600;color:${m.rsConfirmed>=15?'var(--green)':m.rsConfirmed>=0?'var(--amber)':'var(--red)'}">${(m.rsConfirmed>=0?'+':'')+m.rsConfirmed.toFixed(1)}</td>
+            </tr>`).join('')}
+          </tbody></table>`:''}
+
+          ${t.candidates.length>0?`<div style="font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-weight:600">Top Candidates (RS≥75, Trend≥6, Valid Uptrend)</div>
+          <table style="width:100%;font-size:11px">
+            <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:6px 4px">Ticker</th>
+              <th style="text-align:left;padding:6px 4px">Name</th>
+              <th style="text-align:left;padding:6px 4px">Industry</th>
+              <th style="text-align:right;padding:6px 4px">RS</th>
+              <th style="text-align:right;padding:6px 4px">Trend</th>
+              <th style="text-align:right;padding:6px 4px">Setup</th>
+              <th style="text-align:right;padding:6px 4px">1M</th>
+              <th style="text-align:right;padding:6px 4px">3M</th>
+              <th style="text-align:right;padding:6px 4px">Price</th>
+            </tr></thead><tbody>
+            ${t.candidates.map(s=>`<tr>
+              <td style="padding:6px 4px;font-weight:700;color:var(--white)">${s.ticker}</td>
+              <td style="padding:6px 4px;color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name||''}</td>
+              <td style="padding:6px 4px;color:var(--text2);font-size:10px">${s.industry}</td>
+              <td style="padding:6px 4px;text-align:right"><span class="${rsColor(s.rsScore)}">${s.rsScore}</span></td>
+              <td style="padding:6px 4px;text-align:right;color:${s.trendValid?'var(--green)':'var(--text2)'}">${s.trendScore}/10</td>
+              <td style="padding:6px 4px;text-align:right">${setupBadge(s.setup)}</td>
+              <td style="padding:6px 4px;text-align:right;color:${s.ret1m>=0?'var(--green)':'var(--red)'}">${(s.ret1m>=0?'+':'')+s.ret1m.toFixed(1)}%</td>
+              <td style="padding:6px 4px;text-align:right;color:${s.ret3m>=0?'var(--green)':'var(--red)'}">${(s.ret3m>=0?'+':'')+s.ret3m.toFixed(1)}%</td>
+              <td style="padding:6px 4px;text-align:right;color:var(--white)">$${fmt(s.price,2)}</td>
+            </tr>`).join('')}
+          </tbody></table>`:`<div style="font-size:11px;color:var(--text2);font-style:italic;padding:8px 0">No candidate stocks pass the filter (RS≥75, trend score≥6, valid uptrend). Theme may still be early — check back next scan.</div>`}
+        </div>
+      </td></tr>`:''}`;
+    }).join('')}
+  </tbody></table></div>
+  `;
+}
+
+let themeAlignmentExpanded={};
 
 function renderJournal(){
   const open=journalData.trades.filter(t=>t.status==='open');
@@ -1004,6 +1727,88 @@ function setSort(col){
   if(sortCol===col)sortDir=sortDir==='desc'?'asc':'desc';
   else{sortCol=col;sortDir='desc'}
   render();
+}
+
+// Stage 1→2 preset — one-click setup for hunting late Stage 1 / early Stage 2 names.
+// Based on Weinstein stage analysis + the criteria discussed for finding "next RKLB" style setups.
+// Disables CANSLIM because emerging stocks often have messy fundamentals at the inflection.
+function applyStage12Preset(){
+  screenerFilter.stage12=true;
+  screenerFilter.max12m=30;       // dead money for a year (< +30% 12M)
+  screenerFilter.min1m=5;          // just showing thrust (> +5% 1M)
+  screenerFilter.maxDaysBreakout=60; // crossed above 150-SMA within last ~12 weeks
+  screenerFilter.maxRS=85;         // leader-in-waiting, not established leader
+  screenerFilter.excludeFunds=true;  // no mutual funds, CEFs, shell companies
+  // Relax other filters that would exclude emerging names
+  screenerFilter.minRS=50;         // lowered from 80 (emerging names haven't earned RS 80 yet)
+  screenerFilter.minPrice=5;       // filter out penny-stock junk
+  screenerFilter.setup='VCP';      // only tight base formations
+  screenerFilter.trendOnly=true;   // structural uptrend in place (trendValid = price>EMA50>EMA200)
+  screenerFilter.canslim=false;    // fundamentals often noisy at inflection — disable
+  screenerSubTab='all';            // show all, not just setups
+  // Sort by daysSinceBreakout ascending = freshest first
+  sortCol='daysSinceBreakout';
+  sortDir='asc';
+  render();
+}
+
+// Reset all filters to baseline — useful when you want to see what's in the universe
+// without any hidden filtering. Clears CANSLIM, Stage 1→2, trend, setup, RS, price, etc.
+function resetAllFilters(){
+  screenerFilter.minRS=0;
+  screenerFilter.minIndRS=0;
+  screenerFilter.setup='all';
+  screenerFilter.trendOnly=false;
+  screenerFilter.minPrice=0;
+  screenerFilter.maxPrice=0;
+  screenerFilter.minMcap=0;
+  screenerFilter.canslim=false;
+  screenerFilter.stage12=false;
+  screenerFilter.max12m=null;
+  screenerFilter.min1m=null;
+  screenerFilter.maxDaysBreakout=null;
+  screenerFilter.maxRS=null;
+  screenerSubTab='all';
+  sortCol='rsScore';
+  sortDir='desc';
+  render();
+}
+
+// Build a human-readable list of active filters. Shows at top of results so you
+// always know what's filtering the output — no hidden filters.
+function activeFiltersSummary(){
+  const parts=[];
+  const f=screenerFilter;
+  if(f.minRS>0)parts.push(`RS≥${f.minRS}`);
+  if(f.minIndRS>0)parts.push(`Ind RS≥${f.minIndRS}`);
+  if(f.setup!=='all')parts.push(`Setup=${f.setup}`);
+  if(f.trendOnly)parts.push('Trend Valid');
+  if(f.minPrice>0)parts.push(`Price≥$${f.minPrice}`);
+  if(f.maxPrice>0)parts.push(`Price≤$${f.maxPrice}`);
+  if(f.minMcap>0)parts.push(`Mcap≥$${f.minMcap}M`);
+  if(f.canslim){
+    const canslimParts=[];
+    if(f.minEpsGrowthQ)canslimParts.push(`EPSQ≥${f.minEpsGrowthQ}%`);
+    if(f.minEpsGrowthA)canslimParts.push(`EPS3Y≥${f.minEpsGrowthA}%`);
+    if(f.maxFromHigh)canslimParts.push(`%Hi≤${f.maxFromHigh}%`);
+    if(f.maxFloatM)canslimParts.push(`Float≤${f.maxFloatM}M`);
+    if(f.minInstOwn)canslimParts.push(`Inst≥${f.minInstOwn}%`);
+    if(f.minDaysToEarnings)canslimParts.push(`Earn≥${f.minDaysToEarnings}d`);
+    parts.push(`<span style="color:var(--green)">CANSLIM</span>${canslimParts.length?' ('+canslimParts.join(',')+')':''}`);
+  }
+  if(f.stage12){
+    const s12Parts=[];
+    if(f.max12m!=null)s12Parts.push(`12M≤${f.max12m}%`);
+    if(f.min1m!=null)s12Parts.push(`1M≥${f.min1m}%`);
+    if(f.maxDaysBreakout!=null)s12Parts.push(`DSB≤${f.maxDaysBreakout}d`);
+    if(f.maxRS!=null)s12Parts.push(`RS≤${f.maxRS}`);
+    if(f.excludeFunds!==false)s12Parts.push('no funds');
+    parts.push(`<span style="color:#6bb4ff">Stage 1→2</span>${s12Parts.length?' ('+s12Parts.join(',')+')':''}`);
+  }
+  if(screenerSubTab==='setups')parts.push('Setups only');
+  else if(screenerSubTab==='vcp')parts.push('VCP only');
+  else if(screenerSubTab==='pullback')parts.push('Pullback only');
+  return parts;
 }
 
 // Tab handling
