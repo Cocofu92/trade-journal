@@ -1250,14 +1250,14 @@ const DEFAULT_THEME_INDUSTRIES={
     industries:['Copper','Other Industrial Metals & Mining','Aluminum','Steel']
   },
   defence:{
-    label:'European Defence',
-    thesis:'NATO 5% GDP by 2035. US-listed proxies only in this scan.',
+    label:'Aerospace & Defence',
+    thesis:'Global defence spending supercycle. NATO 5% GDP by 2035. US primes + European rearmament. LMT, RTX, NOC, GD, HII plus European names.',
     industries:['Aerospace & Defense']
   },
   space:{
     label:'Space Economy',
-    thesis:'RKLB (Aerospace), ASTS (Communication Equipment), launch + direct-to-cell.',
-    industries:['Aerospace & Defense','Communication Equipment']
+    thesis:'Commercial space infrastructure — rocket launches, satellite constellations, direct-to-cell broadband. NOT military aerospace (that is Aerospace & Defence). RKLB, ASTS, IRDM.',
+    industries:['Communication Equipment']
   },
   japan:{
     label:'Japan',
@@ -1274,7 +1274,7 @@ const DEFAULT_THEME_INDUSTRIES={
 
 // User overrides persisted to localStorage. Versioned so breaking changes
 // (e.g. Finviz-taxonomy migration) can force a refresh from defaults.
-const THEME_MAPPING_VERSION=2;
+const THEME_MAPPING_VERSION=3;
 let themeIndustries=(()=>{
   try{
     const savedVersion=parseInt(localStorage.getItem('velox_eq_theme_industries_v'))||0;
