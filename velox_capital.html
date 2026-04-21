@@ -891,12 +891,33 @@ const depositsBefore=dateStr=>(S.deposits||[]).filter(d=>d.date<=dateStr).reduce
 
 // Portfolio equity = current value of all active positions + uninvested cash in investment accounts
 // For TWR purposes, equity includes cash sitting in the investment accounts (deposits not yet deployed).
+//
+// Accounting model: we do NOT auto-decrement account balances when positions are added.
+// Instead, `accountCommittedCapital()` tells us how much cost basis is tied up in positions
+// from that account, and `accountAvailableCash()` = balance − committed.
+// This keeps the user in control — they edit balances directly, and the app derives availability.
 const investmentAccountIds=['ac_velox_cur','ac_velox_sd','ac_isa'];
-const uninvestedCash=()=>{
-  return accountsAll()
-    .filter(a=>investmentAccountIds.includes(a.id))
-    .reduce((s,a)=>s+(+a.balance||0),0);
+const accountCommittedCapital=accountId=>{
+  // Sum cost-basis (in GBP) of active positions linked to this account
+  return activePositions()
+    .filter(p=>p.accountId===accountId)
+    .reduce((s,p)=>s+positionCostGBP(p),0);
 };
+const accountAvailableCash=accountId=>{
+  const acc=accountsAll().find(a=>a.id===accountId);
+  if(!acc)return 0;
+  // Raw balance is what the user entered for that account.
+  // Available cash = balance − capital already committed to positions from this account.
+  // Note: can go negative if positions appreciate or if cost was paid from elsewhere —
+  // we clamp to 0 for display but the raw math tells us if accounting is off.
+  return Math.max(0,(+acc.balance||0)-accountCommittedCapital(accountId));
+};
+const uninvestedCash=()=>{
+  // Sum available (uncommitted) cash across all investment accounts
+  return investmentAccountIds.reduce((s,id)=>s+accountAvailableCash(id),0);
+};
+// Total equity = all position values (at current prices) + all uninvested cash
+// This is what gets tracked in the equity curve and used for TWR.
 const totalEquity=()=>portfolioValue()+uninvestedCash();
 
 // Record a daily snapshot of equity. Idempotent — one entry per calendar day (overwrites).
@@ -1000,7 +1021,12 @@ function positionRR(p){
 
 // ─── SCANNER INTEGRATION ─────────────────────────────────────────────────────
 // Reads the Velox Equity Scanner's localStorage if present in this browser.
+// Reads the Velox Equity Scanner's localStorage if present in this browser.
 // Non-fatal if scanner hasn't been run — just returns null.
+//
+// Scanner persist format (velox_equity.html::saveScreener):
+//   { compressed: [ {t,n,e,sec,ind,p,mc,r1w,r1,r3,...}, ... ], meta: {...} }
+// We mirror the scanner's expandStock() to reconstitute full field names.
 let scannerCache=null;let scannerCacheAttempted=false;
 function loadScannerData(){
   if(scannerCacheAttempted)return scannerCache;
@@ -1009,10 +1035,14 @@ function loadScannerData(){
     const raw=localStorage.getItem('velox_eq_screener');
     if(!raw)return null;
     const parsed=JSON.parse(raw);
-    if(!parsed||!Array.isArray(parsed.data))return null;
+    if(!parsed)return null;
+    // Scanner stores the array under `compressed` (new format) or `results` (legacy).
+    const rawArr=parsed.compressed||parsed.results||[];
+    if(!Array.isArray(rawArr)||rawArr.length===0)return null;
     // Build an index by ticker for fast lookup
     const byTicker={};
-    parsed.data.forEach(stock=>{
+    rawArr.forEach(stock=>{
+      // If compressed key was present, expand; otherwise assume already-expanded legacy results
       const exp=parsed.compressed?expandScannerStock(stock):stock;
       if(exp&&exp.ticker)byTicker[exp.ticker.toUpperCase()]=exp;
     });
@@ -1023,16 +1053,21 @@ function loadScannerData(){
     return null;
   }
 }
-// Mirror of the scanner's expandStock, kept local so we don't depend on the scanner file being loaded
+// Mirror of the scanner's expandStock — keep field-by-field in sync.
+// Source: velox_equity.html::expandStock()
 function expandScannerStock(c){
   return{
     ticker:c.t,name:c.n,exchange:c.e,sector:c.sec,industry:c.ind,
-    price:c.p,marketCap:(c.mc||0)*1e6,
-    ret1w:c.r1w||0,ret1m:c.r1,ret3m:c.r3,ret6m:c.r6,ret9m:c.r9||0,ret12m:c.r12,
-    rsScore:c.rs,industryRS:c.irs,daysSinceBreakout:c.dsb==null?null:c.dsb,
-    trendValid:c.tv===1,trendScore:c.ts,rsiVal:c.rsi,
-    pct21:c.p21,pct50:c.p50,pct50H:c.p50h,setup:c.su,
-    epsGrowthQ:c.eq,epsGrowthA:c.ea,
+    price:c.p,marketCap:(c.mc||0)*1e6,avgVol:0,
+    ret1w:c.r1w||0,
+    ret1m:c.r1,ret3m:c.r3,ret6m:c.r6,ret9m:c.r9||0,ret12m:c.r12,
+    rsRaw:c.rr,rsEmerging:c.re||0,rsConfirmed:c.rc||0,
+    rsScore:c.rs,industryRS:c.irs,indMedian:0,
+    daysSinceBreakout:c.dsb==null?null:c.dsb,
+    trendValid:c.tv===1,trendScore:c.ts,
+    rsiVal:c.rsi,pct21:c.p21,pct50:c.p50,pct50H:c.p50h,
+    range10:c.r10,range20:c.r20,range50:c.r50,volRatio:c.vr,setup:c.su,
+    epsGrowthQ:c.eq,epsGrowthA:c.ea,floatM:c.fl,instOwn:c.io,daysToEarnings:c.de,
   };
 }
 function scannerLookup(ticker){
@@ -1076,11 +1111,14 @@ function computeScannerIndustryStats(){
     const ret6m=b.stocks.map(s=>s.ret6m||0);
     const ret9m=b.stocks.map(s=>s.ret9m||0);
     const ret12m=b.stocks.map(s=>s.ret12m||0);
+    // Use the scanner's pre-computed RS composites when available.
+    // Fallback to a recomputation if for some reason they're absent.
     const rsEm=b.stocks.map(s=>{
-      // Recompute emerging RS weighted composite since compressed form stores percentile, not raw
+      if(typeof s.rsEmerging==='number'&&!isNaN(s.rsEmerging))return s.rsEmerging;
       return(s.ret1w||0)*0.30+(s.ret1m||0)*0.30+(s.ret3m||0)*0.25+(s.ret6m||0)*0.15;
     });
     const rsConf=b.stocks.map(s=>{
+      if(typeof s.rsConfirmed==='number'&&!isNaN(s.rsConfirmed))return s.rsConfirmed;
       return(s.ret1w||0)*0.15+(s.ret1m||0)*0.25+(s.ret3m||0)*0.30+(s.ret6m||0)*0.20+(s.ret9m||0)*0.10;
     });
     const positive=b.stocks.filter(s=>(s.ret1m||0)>0).length;
@@ -1308,9 +1346,14 @@ document.getElementById('nav').addEventListener('click',e=>{
 function render(){
   const d=new Date();
   const pv=portfolioValue();const pnl=totalPnL();const pp=pnlPct();
+  const eq=totalEquity();const cash=uninvestedCash();
 
   document.getElementById('tbRight').innerHTML=`
-    <div class="tb-stat"><span class="lbl">Portfolio</span><span class="val">${gbp0(pv)}</span></div>
+    <div class="tb-stat"><span class="lbl">Equity</span><span class="val">${gbp0(eq)}</span></div>
+    <div class="tb-divider"></div>
+    <div class="tb-stat"><span class="lbl">Positions</span><span class="val">${gbp0(pv)}</span></div>
+    <div class="tb-divider"></div>
+    <div class="tb-stat"><span class="lbl">Cash</span><span class="val">${gbp0(cash)}</span></div>
     <div class="tb-divider"></div>
     <div class="tb-stat"><span class="lbl">P&L</span><span class="val ${pnl>=0?'positive':'negative'}">${pnl>=0?'+':''}${gbp0(pnl)} (${pp>=0?'+':''}${pct(pp)})</span></div>
     <div class="tb-divider"></div>
