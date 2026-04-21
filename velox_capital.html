@@ -421,12 +421,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div class="nav-item" data-tab="pulse">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Pulse
-      <span class="nav-soon">Soon</span>
     </div>
     <div class="nav-item" data-tab="themes">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       Themes
-      <span class="nav-soon">Soon</span>
     </div>
     <div class="nav-item" data-tab="screener">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -553,14 +551,33 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
     <div class="field-grid">
       <div class="field">
+        <label>Currency</label>
+        <select id="m_currency">
+          <option value="GBP">GBP — £ (UK-listed, ISA-native)</option>
+          <option value="USD">USD — $ (US-listed, converts to GBP at FX rate)</option>
+        </select>
+        <div class="hint">BAE, Shell, BP = GBP. NVDA, FCX, HWM = USD.</div>
+      </div>
+      <div class="field">
         <label>Current Price</label>
         <input type="number" id="m_current" step="0.01" placeholder="0.00">
-        <div class="hint">Update manually for now</div>
+        <div class="hint">In the same currency as entry</div>
       </div>
+    </div>
+
+    <div class="field-grid">
       <div class="field">
         <label>Stop / Thesis Break</label>
         <input type="number" id="m_stop" step="0.01" placeholder="0.00">
         <div class="hint">Price below which the thesis is wrong</div>
+      </div>
+      <div class="field">
+        <label>Account</label>
+        <select id="m_accountId">
+          <option value="ac_isa">Personal — S&S ISA</option>
+          <option value="ac_velox_cur">Velox — Current</option>
+          <option value="ac_velox_sd">Velox — Share Dealing</option>
+        </select>
       </div>
     </div>
 
@@ -1026,6 +1043,104 @@ function scannerLookup(ticker){
 }
 function invalidateScannerCache(){scannerCache=null;scannerCacheAttempted=false;}
 
+// Get a flat array of all scanner stocks (for industry stats + alignment calcs)
+function allScannerStocks(){
+  const cache=loadScannerData();
+  if(!cache)return[];
+  return Object.values(cache.data||{});
+}
+
+// Recompute industry stats from the scanner's persisted data. Mirrors the
+// logic in velox_equity.html. Returns array of {industry, sector, count,
+// breadth, ret1w/1m/3m/6m/9m/12m medians, rsEmerging/rsConfirmed medians}.
+// Industries with < 3 stocks are filtered out (too noisy).
+function computeScannerIndustryStats(){
+  const stocks=allScannerStocks();
+  if(stocks.length===0)return[];
+  const byInd={};
+  stocks.forEach(s=>{
+    const ind=s.industry||'Unknown';
+    if(!byInd[ind])byInd[ind]={industry:ind,sector:s.sector||'',stocks:[]};
+    byInd[ind].stocks.push(s);
+  });
+  const median=arr=>{
+    const sorted=arr.slice().sort((a,b)=>a-b);
+    if(sorted.length===0)return 0;
+    const m=Math.floor(sorted.length/2);
+    return sorted.length%2?sorted[m]:(sorted[m-1]+sorted[m])/2;
+  };
+  return Object.values(byInd).filter(b=>b.stocks.length>=3).map(b=>{
+    const ret1w=b.stocks.map(s=>s.ret1w||0);
+    const ret1m=b.stocks.map(s=>s.ret1m||0);
+    const ret3m=b.stocks.map(s=>s.ret3m||0);
+    const ret6m=b.stocks.map(s=>s.ret6m||0);
+    const ret9m=b.stocks.map(s=>s.ret9m||0);
+    const ret12m=b.stocks.map(s=>s.ret12m||0);
+    const rsEm=b.stocks.map(s=>{
+      // Recompute emerging RS weighted composite since compressed form stores percentile, not raw
+      return(s.ret1w||0)*0.30+(s.ret1m||0)*0.30+(s.ret3m||0)*0.25+(s.ret6m||0)*0.15;
+    });
+    const rsConf=b.stocks.map(s=>{
+      return(s.ret1w||0)*0.15+(s.ret1m||0)*0.25+(s.ret3m||0)*0.30+(s.ret6m||0)*0.20+(s.ret9m||0)*0.10;
+    });
+    const positive=b.stocks.filter(s=>(s.ret1m||0)>0).length;
+    return{
+      industry:b.industry,sector:b.sector,count:b.stocks.length,
+      breadth:(positive/b.stocks.length)*100,
+      ret1w:median(ret1w),ret1m:median(ret1m),ret3m:median(ret3m),
+      ret6m:median(ret6m),ret9m:median(ret9m),ret12m:median(ret12m),
+      rsEmerging:median(rsEm),rsConfirmed:median(rsConf),
+      stocks:b.stocks,
+    };
+  });
+}
+
+// Load user's theme-industry mapping from the scanner's localStorage (if present)
+function loadScannerThemeIndustries(){
+  try{
+    const raw=localStorage.getItem('velox_eq_theme_industries');
+    if(raw)return JSON.parse(raw);
+  }catch(e){}
+  // Fallback default mapping — mirrors the scanner's defaults
+  return{
+    ai:{label:'AI Infrastructure',industries:['Semiconductors','Semiconductor Equipment & Materials','Electronic Components','Software - Infrastructure','Information Technology Services']},
+    power:{label:'Power & Nuclear',industries:['Utilities - Regulated Electric','Utilities - Independent Power Producers','Utilities - Diversified','Utilities - Renewable','Uranium','Electrical Equipment & Parts','Specialty Industrial Machinery']},
+    copper:{label:'Copper & Critical Metals',industries:['Copper','Other Industrial Metals & Mining','Aluminum','Steel']},
+    defence:{label:'Aerospace & Defence',industries:['Aerospace & Defense']},
+    space:{label:'Space Economy',industries:['Communication Equipment']},
+    japan:{label:'Japan',industries:[]},
+    gold:{label:'Gold (Ballast)',industries:['Gold','Other Precious Metals & Mining','Silver']},
+  };
+}
+
+// Compute theme conviction. Returns {score, verdict, reasons, matches} per theme.
+function computeThemeConviction(themeCode,industryStats,themeIndustries){
+  const t=themeIndustries[themeCode];
+  if(!t||!t.industries.length){
+    return{themeCode,label:t?t.label:themeCode,score:null,verdict:'nodata',matches:[]};
+  }
+  const normalise=s=>(s||'').toLowerCase().replace(/[—–-]/g,'-').replace(/\s+/g,' ').trim();
+  const wanted=new Set(t.industries.map(normalise));
+  const matches=industryStats.filter(ind=>wanted.has(normalise(ind.industry)));
+  if(matches.length===0){
+    return{themeCode,label:t.label,score:null,verdict:'nodata',matches:[]};
+  }
+  const avgConfirmed=matches.reduce((s,m)=>s+m.rsConfirmed,0)/matches.length;
+  const avgEmerging=matches.reduce((s,m)=>s+m.rsEmerging,0)/matches.length;
+  const avgBreadth=matches.reduce((s,m)=>s+m.breadth,0)/matches.length;
+  // Verdict logic — mirrors scanner
+  let verdict='wait';
+  if(avgConfirmed>=15&&avgEmerging>=10&&avgBreadth>=50)verdict='flowing';
+  else if(avgConfirmed>=8||(avgEmerging>=5&&avgBreadth>=40))verdict='watch';
+  else if(avgConfirmed>0&&avgEmerging<0)verdict='fading';
+  // Score: 0-100 heuristic
+  let score=0;
+  if(avgConfirmed>=25)score+=40;else if(avgConfirmed>=15)score+=30;else if(avgConfirmed>=8)score+=20;else if(avgConfirmed>0)score+=10;
+  if(avgEmerging>=18)score+=30;else if(avgEmerging>=10)score+=22;else if(avgEmerging>=5)score+=15;else if(avgEmerging>0)score+=7;
+  if(avgBreadth>=80)score+=30;else if(avgBreadth>=60)score+=22;else if(avgBreadth>=45)score+=15;else if(avgBreadth>=30)score+=8;
+  return{themeCode,label:t.label,score:Math.min(100,score),verdict,matches,avgConfirmed,avgEmerging,avgBreadth};
+}
+
 // Account / wealth aggregates
 const accountsAll=()=>S.accounts||[];
 const assetsTotal=()=>accountsAll().filter(a=>a.balance>0).reduce((s,a)=>s+(+a.balance||0),0);
@@ -1195,9 +1310,9 @@ function render(){
   const pv=portfolioValue();const pnl=totalPnL();const pp=pnlPct();
 
   document.getElementById('tbRight').innerHTML=`
-    <div class="tb-stat"><span class="lbl">Portfolio</span><span class="val">${usd(pv)}</span></div>
+    <div class="tb-stat"><span class="lbl">Portfolio</span><span class="val">${gbp0(pv)}</span></div>
     <div class="tb-divider"></div>
-    <div class="tb-stat"><span class="lbl">P&L</span><span class="val ${pnl>=0?'positive':'negative'}">${pnl>=0?'+':''}${usd(pnl)} (${pp>=0?'+':''}${pct(pp)})</span></div>
+    <div class="tb-stat"><span class="lbl">P&L</span><span class="val ${pnl>=0?'positive':'negative'}">${pnl>=0?'+':''}${gbp0(pnl)} (${pp>=0?'+':''}${pct(pp)})</span></div>
     <div class="tb-divider"></div>
     <div class="tb-date">${d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</div>
   `;
@@ -1212,6 +1327,8 @@ function render(){
   else if(tab==='watchlist')c.innerHTML=renderWatchlist();
   else if(tab==='allocation')c.innerHTML=renderAllocation();
   else if(tab==='screener')c.innerHTML=renderScreener();
+  else if(tab==='pulse')c.innerHTML=renderPulse();
+  else if(tab==='themes')c.innerHTML=renderThemes();
   else if(tab==='performance')c.innerHTML=renderPerformance();
   else if(tab==='accounts')c.innerHTML=renderAccounts();
   else if(tab==='cashflow')c.innerHTML=renderCashflow();
@@ -3221,6 +3338,242 @@ function resetState(){
   save();render();
 }
 
+// ─── PULSE TAB — Industry RS from the scanner ────────────────────────────────
+// Replicates the scanner's Industry RS tab inside Velox Capital. Shows median
+// returns and RS composites for every industry with ≥3 stocks. Sortable columns.
+let pulseSortCol='rsConfirmed';let pulseSortDir='desc';
+function setPulseSort(col){
+  if(pulseSortCol===col)pulseSortDir=pulseSortDir==='desc'?'asc':'desc';
+  else{pulseSortCol=col;pulseSortDir='desc';}
+  render();
+}
+let pulseExpanded={};
+function togglePulseRow(ind){pulseExpanded[ind]=!pulseExpanded[ind];render();}
+
+function renderPulse(){
+  const cache=loadScannerData();
+  if(!cache||allScannerStocks().length===0){
+    return`<div style="padding:60px 40px;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:14px">
+      <div style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--white);margin-bottom:10px">Pulse needs scanner data</div>
+      <div style="font-size:13px;color:var(--text2);max-width:520px;margin:0 auto;line-height:1.55;font-family:var(--sans)">
+        Open <span style="font-family:var(--mono);color:var(--accent)">velox_equity.html</span> in the <strong>same browser origin</strong>, run a scan (15-25 min), and come back.
+        Industry RS is computed from the scanner's persisted data.
+      </div>
+      <div style="margin-top:22px">
+        <a href="velox_equity.html" target="_blank" class="btn btn-gold">Open Scanner</a>
+      </div>
+    </div>`;
+  }
+  const stats=computeScannerIndustryStats();
+  if(stats.length===0){
+    return`<div style="padding:40px;text-align:center;color:var(--text2)">No industries with ≥3 stocks in the scan. Re-run the scanner with broader filters.</div>`;
+  }
+  const sorted=stats.slice().sort((a,b)=>{
+    const av=a[pulseSortCol]||0,bv=b[pulseSortCol]||0;
+    return pulseSortDir==='desc'?bv-av:av-bv;
+  });
+
+  const colorPct=(v,max)=>{
+    if(v>=max*0.6)return'var(--green)';
+    if(v>=max*0.3)return'var(--amber)';
+    if(v>=0)return'var(--text)';
+    if(v>=-max*0.3)return'var(--text2)';
+    return'var(--red)';
+  };
+  const sortTh=(col,label,title='')=>{
+    const arrow=pulseSortCol===col?(pulseSortDir==='desc'?'↓':'↑'):'';
+    return`<th style="cursor:pointer;user-select:none;text-align:right;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px" onclick="setPulseSort('${col}')" ${title?`title="${title}"`:''}>${label} <span style="color:var(--accent)">${arrow}</span></th>`;
+  };
+
+  return`
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="accent" style="background:var(--blue)"></div>
+      <div class="lbl">Industries tracked</div><div class="val">${stats.length}</div><div class="sub">≥3 stocks per bucket</div>
+    </div>
+    <div class="kpi"><div class="accent" style="background:var(--green)"></div>
+      <div class="lbl">Strong (Confirmed ≥15)</div><div class="val">${stats.filter(s=>s.rsConfirmed>=15).length}</div><div class="sub">Sustained multi-month strength</div>
+    </div>
+    <div class="kpi"><div class="accent" style="background:var(--amber)"></div>
+      <div class="lbl">Emerging (Emerging ≥10)</div><div class="val">${stats.filter(s=>s.rsEmerging>=10).length}</div><div class="sub">Momentum building recently</div>
+    </div>
+    <div class="kpi"><div class="accent" style="background:var(--red)"></div>
+      <div class="lbl">Weak (Confirmed ≤-10)</div><div class="val">${stats.filter(s=>s.rsConfirmed<=-10).length}</div><div class="sub">Underperforming structurally</div>
+    </div>
+  </div>
+
+  <div class="sec-head">
+    <div style="display:flex;align-items:baseline">
+      <div class="sec-title">Industry Relative Strength</div>
+      <div class="sec-sub">Median returns across every industry with ≥3 stocks. Click column to sort, click row for constituents.</div>
+    </div>
+    <div class="sec-actions">
+      <button class="btn btn-sm" onclick="invalidateScannerCache();render()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--mono)">
+      <thead><tr style="background:var(--bg)">
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Industry</th>
+        ${sortTh('count','#','Number of stocks')}
+        ${sortTh('breadth','Breadth','% of stocks with positive 1M return')}
+        ${sortTh('ret1w','1W')}
+        ${sortTh('ret1m','1M')}
+        ${sortTh('ret3m','3M')}
+        ${sortTh('ret6m','6M')}
+        ${sortTh('ret12m','12M')}
+        ${sortTh('rsEmerging','Emerging','Weighted near-term momentum — flags new trends')}
+        ${sortTh('rsConfirmed','Confirmed','Balanced multi-window RS — flags sustained trends')}
+      </tr></thead>
+      <tbody>
+      ${sorted.map(s=>{
+        const open=!!pulseExpanded[s.industry];
+        return`<tr style="border-top:1px solid var(--border);cursor:pointer" onclick="togglePulseRow(${JSON.stringify(s.industry).replace(/"/g,'&quot;')})">
+          <td style="padding:10px 12px;color:var(--white);font-family:var(--sans);font-weight:600;font-size:12px">${s.industry} <span style="color:var(--text3);font-weight:400;font-size:10px">${s.sector}</span></td>
+          <td style="text-align:right;padding:10px 12px;color:var(--text2)">${s.count}</td>
+          <td style="text-align:right;padding:10px 12px;color:${s.breadth>=60?'var(--green)':s.breadth>=40?'var(--amber)':'var(--red)'};font-weight:600">${s.breadth.toFixed(0)}%</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.ret1w,10)}">${s.ret1w>=0?'+':''}${s.ret1w.toFixed(1)}%</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.ret1m,15)}">${s.ret1m>=0?'+':''}${s.ret1m.toFixed(1)}%</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.ret3m,25)}">${s.ret3m>=0?'+':''}${s.ret3m.toFixed(1)}%</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.ret6m,40)}">${s.ret6m>=0?'+':''}${s.ret6m.toFixed(1)}%</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.ret12m,80)}">${s.ret12m>=0?'+':''}${s.ret12m.toFixed(1)}%</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.rsEmerging,20)};font-weight:600">${s.rsEmerging>=0?'+':''}${s.rsEmerging.toFixed(1)}</td>
+          <td style="text-align:right;padding:10px 12px;color:${colorPct(s.rsConfirmed,25)};font-weight:700">${s.rsConfirmed>=0?'+':''}${s.rsConfirmed.toFixed(1)}</td>
+        </tr>
+        ${open?`<tr><td colspan="10" style="background:var(--bg);padding:14px 20px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:var(--sans)">Top 20 by RS score</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${s.stocks.slice().sort((a,b)=>(b.rsScore||0)-(a.rsScore||0)).slice(0,20).map(stock=>`
+            <div style="padding:5px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:11px">
+              <span style="color:var(--white);font-weight:600">${stock.ticker}</span>
+              <span style="color:${stock.rsScore>=80?'var(--green)':stock.rsScore>=60?'var(--amber)':'var(--text2)'};margin-left:6px">RS ${stock.rsScore}</span>
+              <span style="color:${stock.ret1m>=0?'var(--green)':'var(--red)'};margin-left:6px">${stock.ret1m>=0?'+':''}${stock.ret1m.toFixed(0)}%</span>
+            </div>
+          `).join('')}
+          </div>
+        </td></tr>`:''}
+        `;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>
+  `;
+}
+
+// ─── THEMES TAB — Alignment from scanner ─────────────────────────────────────
+// Replicates the scanner's Alignment tab. Shows which themes are flowing/watch/
+// wait based on backing industry RS performance.
+function renderThemes(){
+  const cache=loadScannerData();
+  if(!cache||allScannerStocks().length===0){
+    return`<div style="padding:60px 40px;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:14px">
+      <div style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--white);margin-bottom:10px">Themes needs scanner data</div>
+      <div style="font-size:13px;color:var(--text2);max-width:520px;margin:0 auto;line-height:1.55;font-family:var(--sans)">
+        Open <span style="font-family:var(--mono);color:var(--accent)">velox_equity.html</span> and run a scan. Theme alignment is computed from industry momentum.
+      </div>
+      <div style="margin-top:22px">
+        <a href="velox_equity.html" target="_blank" class="btn btn-gold">Open Scanner</a>
+      </div>
+    </div>`;
+  }
+  const stats=computeScannerIndustryStats();
+  const themeMap=loadScannerThemeIndustries();
+  const themes=Object.keys(themeMap).map(code=>computeThemeConviction(code,stats,themeMap));
+  // Sort by verdict priority then score
+  const verdictRank={flowing:0,watch:1,fading:2,wait:3,nodata:4};
+  themes.sort((a,b)=>{
+    const vr=(verdictRank[a.verdict]||9)-(verdictRank[b.verdict]||9);
+    if(vr!==0)return vr;
+    return(b.score||0)-(a.score||0);
+  });
+
+  const verdictBadge=v=>{
+    const map={
+      flowing:{text:'FLOWING IN',bg:'rgba(134,220,160,.15)',color:'var(--green)',border:'var(--green)'},
+      watch:{text:'WATCH',bg:'rgba(245,158,11,.15)',color:'var(--amber)',border:'var(--amber)'},
+      wait:{text:'WAIT',bg:'rgba(100,116,139,.15)',color:'var(--text2)',border:'var(--border2)'},
+      fading:{text:'FADING',bg:'rgba(240,165,165,.15)',color:'var(--red)',border:'var(--red)'},
+      nodata:{text:'NO DATA',bg:'rgba(100,116,139,.08)',color:'var(--text3)',border:'var(--border)'},
+    };
+    const m=map[v]||map.wait;
+    return`<span style="padding:3px 10px;background:${m.bg};border:1px solid ${m.border};color:${m.color};border-radius:999px;font-size:10px;font-weight:700;letter-spacing:1px;font-family:var(--sans)">${m.text}</span>`;
+  };
+
+  const topThemes=themes.filter(t=>t.verdict==='flowing').slice(0,3);
+
+  return`
+  ${topThemes.length>0?`
+  <div class="sec-head" style="margin-top:0">
+    <div style="display:flex;align-items:baseline">
+      <div class="sec-title">Deploy This Week — Top Themes</div>
+      <div class="sec-sub">Strongest flows by breadth × emerging × confirmed</div>
+    </div>
+    <div class="sec-actions">
+      <button class="btn btn-sm" onclick="invalidateScannerCache();render()">Refresh</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(${topThemes.length},1fr);gap:14px;margin-bottom:22px">
+  ${topThemes.map((t,i)=>{
+    const topStocks=[].concat(...t.matches.map(m=>m.stocks))
+      .sort((a,b)=>(b.rsScore||0)-(a.rsScore||0))
+      .slice(0,4);
+    const leadInd=t.matches.slice().sort((a,b)=>b.rsConfirmed-a.rsConfirmed)[0];
+    return`<div style="padding:20px;background:var(--bg2);border:1px solid var(--green);border-left:3px solid var(--green);border-radius:12px">
+      <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-family:var(--serif);font-size:18px;color:var(--white);font-weight:600">${i+1}. ${t.label}</div>
+        </div>
+        ${verdictBadge(t.verdict)}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:14px;font-family:var(--sans);line-height:1.5">
+        ${leadInd?leadInd.industry+': ':''}${t.avgConfirmed.toFixed(1)} confirmed / ${t.avgEmerging.toFixed(1)} emerging / ${t.avgBreadth.toFixed(0)}% breadth
+      </div>
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:var(--sans)">Top candidates</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+      ${topStocks.map(s=>`<span style="padding:4px 9px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;font-family:var(--mono);font-size:11px"><span style="color:var(--white);font-weight:600">${s.ticker}</span> <span style="color:var(--text3)">RS</span> <span style="color:${s.rsScore>=80?'var(--green)':'var(--amber)'}">${s.rsScore}</span></span>`).join('')}
+      </div>
+    </div>`;
+  }).join('')}
+  </div>
+  `:''}
+
+  <div class="sec-head">
+    <div style="display:flex;align-items:baseline">
+      <div class="sec-title">All Themes</div>
+      <div class="sec-sub">Industry-backed conviction per theme</div>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--bg);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.8px">
+        <th style="text-align:left;padding:12px 14px">Theme</th>
+        <th style="text-align:center;padding:12px 14px">Verdict</th>
+        <th style="text-align:right;padding:12px 14px">Score</th>
+        <th style="text-align:right;padding:12px 14px">Backing</th>
+        <th style="text-align:right;padding:12px 14px">Confirmed</th>
+        <th style="text-align:right;padding:12px 14px">Emerging</th>
+        <th style="text-align:right;padding:12px 14px">Breadth</th>
+      </tr></thead>
+      <tbody>
+      ${themes.map(t=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:14px 14px;color:var(--white);font-weight:600;font-family:var(--sans)">${t.label}</td>
+        <td style="text-align:center;padding:14px 14px">${verdictBadge(t.verdict)}</td>
+        <td style="text-align:right;padding:14px 14px;font-family:var(--mono);font-weight:700;color:${t.score>=80?'var(--green)':t.score>=50?'var(--amber)':'var(--text2)'}">${t.score==null?'—':t.score}</td>
+        <td style="text-align:right;padding:14px 14px;font-family:var(--mono);color:var(--text2)">${t.matches.length} matched</td>
+        <td style="text-align:right;padding:14px 14px;font-family:var(--mono);color:${(t.avgConfirmed||0)>=15?'var(--green)':(t.avgConfirmed||0)>0?'var(--amber)':'var(--red)'};font-weight:600">${t.avgConfirmed==null?'—':(t.avgConfirmed>=0?'+':'')+t.avgConfirmed.toFixed(1)}</td>
+        <td style="text-align:right;padding:14px 14px;font-family:var(--mono);color:${(t.avgEmerging||0)>=10?'var(--green)':(t.avgEmerging||0)>0?'var(--amber)':'var(--red)'};font-weight:600">${t.avgEmerging==null?'—':(t.avgEmerging>=0?'+':'')+t.avgEmerging.toFixed(1)}</td>
+        <td style="text-align:right;padding:14px 14px;font-family:var(--mono);color:${(t.avgBreadth||0)>=60?'var(--green)':(t.avgBreadth||0)>=40?'var(--amber)':'var(--red)'};font-weight:600">${t.avgBreadth==null?'—':t.avgBreadth.toFixed(0)+'%'}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  `;
+}
+
 // ─── SCREENER INTEGRATION TAB ────────────────────────────────────────────────
 // Shows the status of the linked Velox Equity Scanner. Data is read from the
 // same browser's localStorage — the scanner must be run from velox_equity.html
@@ -3284,16 +3637,30 @@ function renderScreener(){
   </div>
 
   ${!hasData?`
-  <div style="padding:40px;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:14px;color:var(--text2);font-family:var(--sans)">
-    <div style="font-family:var(--serif);font-size:17px;font-style:italic;color:var(--white);margin-bottom:8px">No scanner data in this browser yet</div>
-    <div style="font-size:13px;line-height:1.6;max-width:520px;margin:0 auto">
-      The Velox Equity Scanner runs as a separate tool.
-      Open <span style="font-family:var(--mono);color:var(--accent)">velox_equity.html</span> in this browser,
-      run a full scan (15–25 min), and come back. The scan results will appear here
-      and automatically enrich your position &amp; watchlist cards.
+  <div style="padding:30px;background:var(--bg2);border:1px solid var(--border);border-radius:14px">
+    <div style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--white);margin-bottom:6px;text-align:center">Scanner not connected</div>
+    <div style="font-size:13px;color:var(--text2);text-align:center;line-height:1.6;max-width:620px;margin:0 auto 20px;font-family:var(--sans)">
+      Velox Capital reads scanner data from <strong>the same browser origin</strong>. If the scanner doesn't appear here, it's almost always because the two files are being served from different URLs.
     </div>
-    <div style="margin-top:20px">
-      <a href="velox_equity.html" target="_blank" class="btn btn-gold">Open Scanner</a>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:18px 22px;font-family:var(--mono);font-size:11.5px;line-height:1.7">
+      <div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:var(--sans);font-weight:600">Diagnostic</div>
+      <div>Current page origin: <span style="color:var(--white)">${(window.location.origin||'file://')}</span></div>
+      <div>Looking for localStorage key: <span style="color:var(--accent)">velox_eq_screener</span></div>
+      <div>Found: <span style="color:var(--red)">no data</span></div>
+      <div style="margin-top:14px;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px;font-family:var(--sans);font-weight:600">Fix checklist</div>
+      <div style="font-family:var(--sans);font-size:12px;color:var(--text);line-height:1.7;margin-top:8px">
+        <div>1. Open <span style="font-family:var(--mono);color:var(--accent)">velox_equity.html</span> from the <em>exact same origin</em> as this page (both from GitHub Pages, or both as local files in the same folder)</div>
+        <div>2. Run a full scan on the scanner (Settings → Run Full Scan, ~15-25 min)</div>
+        <div>3. Wait until scan shows "COMPLETE"</div>
+        <div>4. Return here and click <strong>Refresh</strong> above</div>
+      </div>
+      <div style="margin-top:14px;font-family:var(--sans);font-size:11px;color:var(--text3);line-height:1.5">
+        <strong>Common mistake:</strong> Opening the scanner via <span style="font-family:var(--mono)">file:///…</span> and Velox Capital from <span style="font-family:var(--mono)">https://…</span> — they don't share storage.
+        Both must be accessed the same way (typically via GitHub Pages URL).
+      </div>
+    </div>
+    <div style="margin-top:22px;text-align:center">
+      <a href="velox_equity.html" target="_blank" class="btn btn-gold" style="text-decoration:none">Open Scanner</a>
     </div>
   </div>`:`
   <div class="sec-head" style="margin-top:30px">
@@ -3606,8 +3973,6 @@ function renderPlaceholder(t){
   const msgs={
     watchlist:{title:'Watchlist',msg:'Names you\'re stalking before they become positions. Setup triggers, thesis development, waiting for the right entry.',eta:'Next session'},
     allocation:{title:'Allocation',msg:'When £500 lands, where does it go? Target weights, current weights, what needs topping up, what needs trimming.',eta:'Coming soon'},
-    pulse:{title:'Market Pulse',msg:'The tape. Sectors and industries moving. What\'s attracting capital, what\'s getting sold. Daily, weekly, monthly lens.',eta:'Coming soon'},
-    themes:{title:'Themes',msg:'Your curated narratives — AI infra, nuclear, copper, space, defence, energy, Japan. Each with its leading names and current momentum.',eta:'Coming soon'},
     accounts:{title:'Accounts',msg:'Personal, Velox Capital, long-term wealth. Balances, net worth, cash positions.',eta:'Migrated from Velox Finance'},
     cashflow:{title:'Cash Flow',msg:'Income, bills, monthly surplus. Where the investment capital comes from each month.',eta:'Migrated from Velox Finance'},
     journal:{title:'Journal',msg:'Trade diary, weekly reviews, macro notes, thesis updates. Compound the thinking over time.',eta:'Coming soon'},
@@ -3642,6 +4007,8 @@ function openModal(id=null){
   document.getElementById('m_current').value=p?p.current:'';
   document.getElementById('m_stop').value=p&&p.stop?p.stop:'';
   document.getElementById('m_conviction').value=p?p.conviction:'A';
+  document.getElementById('m_currency').value=p?(p.currency||'USD'):'GBP';
+  document.getElementById('m_accountId').value=p?(p.accountId||'ac_isa'):'ac_isa';
   document.getElementById('modalBg').classList.add('open');
 }
 
@@ -3669,6 +4036,9 @@ function savePosition(){
     current:parseFloat(document.getElementById('m_current').value)||0,
     stop:parseFloat(document.getElementById('m_stop').value)||null,
     conviction:document.getElementById('m_conviction').value,
+    currency:document.getElementById('m_currency').value||'GBP',
+    accountId:document.getElementById('m_accountId').value||'ac_isa',
+    type:'equity',
   };
   if(editingId){
     Object.assign(S.positions.find(p=>p.id===editingId),data);
