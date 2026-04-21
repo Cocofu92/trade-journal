@@ -561,7 +561,23 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="field">
         <label>Current Price</label>
         <input type="number" id="m_current" step="0.01" placeholder="0.00">
-        <div class="hint">In the same currency as entry</div>
+        <div class="hint">Auto-updated by FMP — leave empty if unknown</div>
+      </div>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>FMP Ticker (override)</label>
+        <input type="text" id="m_fmpTicker" placeholder="auto" style="text-transform:uppercase">
+        <div class="hint">Leave blank — auto-derived: GBP→.L suffix, USD→as-is. Override only for edge cases (eg ADRs, Tokyo).</div>
+      </div>
+      <div class="field">
+        <label>Conviction Level</label>
+        <select id="m_conviction">
+          <option value="A">A — Highest conviction, biggest size</option>
+          <option value="B">B — Solid thesis, normal size</option>
+          <option value="C">C — Starter position, small size</option>
+        </select>
       </div>
     </div>
 
@@ -579,15 +595,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
           <option value="ac_velox_sd">Velox — Share Dealing</option>
         </select>
       </div>
-    </div>
-
-    <div class="field">
-      <label>Conviction Level</label>
-      <select id="m_conviction">
-        <option value="A">A — Highest conviction, biggest size</option>
-        <option value="B">B — Solid thesis, normal size</option>
-        <option value="C">C — Starter position, small size</option>
-      </select>
     </div>
 
     <div class="modal-actions">
@@ -677,6 +684,8 @@ const DEFAULT_STATE={
   themes:{},
   // FX rate (USD → GBP). Update manually as needed.
   fxRate:0.79,
+  // FMP Premium API key — used for auto-pricing positions and watchlist
+  fmpApiKey:'fsUwZ3RqDc7Wa2pjUyMhlLnOet1HVwUl',
   // Pay cycle anchor — day of month when budget cycle resets (e.g., 25 = paid on 25th)
   cycleAnchor:25,
   // Accounts (Personal / Velox / Wealth)
@@ -738,6 +747,8 @@ function migrateState(s){
   if(!Array.isArray(s.positions))s.positions=[];
   if(typeof s.fxRate!=='number')s.fxRate=0.79;
   if(typeof s.cycleAnchor!=='number')s.cycleAnchor=25;
+  // FMP Premium API key — used for auto-pricing
+  if(!s.fmpApiKey)s.fmpApiKey='fsUwZ3RqDc7Wa2pjUyMhlLnOet1HVwUl';
   if(!s.themeTargets||typeof s.themeTargets!=='object')s.themeTargets={};
   if(!s.themes||typeof s.themes!=='object')s.themes={};
   // Seed default theme targets if empty (based on prior thesis work)
@@ -882,6 +893,144 @@ const realisedPnLYTD=()=>{
   const yearStart=new Date().getFullYear()+'-01-01';
   return(S.trades||[]).filter(t=>t.date>=yearStart).reduce((s,t)=>s+(+t.realisedPnL||0),0);
 };
+
+// ─── PRICE AUTO-REFRESH (FMP Premium) ───────────────────────────────────────
+// Fetches current quotes from Financial Modeling Prep for all active and watch
+// positions in a single batched API call. Updates `current` price and `dayChangePct`.
+//
+// Ticker derivation:
+//   - USD positions: use ticker as-is (NVDA, FCX, HWM)
+//   - GBP positions: append .L suffix for LSE (BAE → BA. → BA.L)
+//   - Manual override: position.fmpTicker (set in modal) wins if present
+//
+// Refresh strategy: auto on page load (debounced, silent on failure),
+// plus manual button. We track lastRefresh so the UI can show "Updated 2m ago".
+
+// Convert a position's display ticker to the FMP API ticker.
+// Examples: BA. (GBP) → BA.L | NVDA (USD) → NVDA | BAE.L (override) → BAE.L
+function fmpTickerFor(p){
+  if(p.fmpTicker&&p.fmpTicker.trim())return p.fmpTicker.trim().toUpperCase();
+  const t=(p.ticker||'').trim().toUpperCase().replace(/\.$/,''); // strip trailing dot
+  if(p.currency==='GBP')return t+'.L';
+  return t; // USD default
+}
+
+// State for refresh tracking. Initialised lazily so survives page loads via state.
+function getPriceMeta(){
+  if(!S.priceMeta)S.priceMeta={lastRefresh:null,lastError:null,lastCount:0};
+  return S.priceMeta;
+}
+
+let priceRefreshInFlight=false;
+async function refreshPrices(opts={}){
+  const{silent=false}=opts;
+  if(priceRefreshInFlight)return{ok:false,reason:'already-running'};
+  priceRefreshInFlight=true;
+
+  const meta=getPriceMeta();
+  const apiKey=S.fmpApiKey;
+  if(!apiKey){
+    meta.lastError='No FMP API key set. Add one in Settings.';
+    priceRefreshInFlight=false;
+    if(!silent)alert(meta.lastError);
+    save();render();
+    return{ok:false,reason:'no-key'};
+  }
+
+  // Collect tickers from active + watch positions only. Skip exited.
+  // De-dupe — we send one request per unique FMP ticker.
+  const positions=S.positions.filter(p=>p.status==='active'||p.status==='watch');
+  if(positions.length===0){
+    priceRefreshInFlight=false;
+    if(!silent)alert('No active or watch positions to refresh.');
+    return{ok:false,reason:'no-positions'};
+  }
+  const tickerMap={}; // fmpTicker → [position1, position2, ...]
+  positions.forEach(p=>{
+    const t=fmpTickerFor(p);
+    if(!t)return;
+    if(!tickerMap[t])tickerMap[t]=[];
+    tickerMap[t].push(p);
+  });
+  const tickers=Object.keys(tickerMap);
+  if(tickers.length===0){
+    priceRefreshInFlight=false;
+    return{ok:false,reason:'no-tickers'};
+  }
+
+  try{
+    // FMP batched quote endpoint — comma-separated tickers, one call.
+    // Note: the .L suffix MUST be URL-encoded since dots in path are problematic
+    // depending on FMP's parser. We use simple encoding which works for both.
+    const url=`https://financialmodelingprep.com/api/v3/quote/${tickers.join(',')}?apikey=${apiKey}`;
+    const res=await fetch(url);
+    if(!res.ok){
+      throw new Error(`FMP API ${res.status}: ${res.statusText}`);
+    }
+    const data=await res.json();
+    if(!Array.isArray(data)){
+      throw new Error('Unexpected FMP response shape');
+    }
+
+    // Apply each quote to all positions matching that ticker
+    let updated=0;
+    const missing=[];
+    data.forEach(quote=>{
+      const t=(quote.symbol||'').toUpperCase();
+      const matches=tickerMap[t];
+      if(!matches||matches.length===0)return;
+      const price=+quote.price;
+      const changesPercentage=+quote.changesPercentage;
+      if(!isFinite(price)||price<=0)return;
+      matches.forEach(p=>{
+        p.current=price;
+        if(isFinite(changesPercentage))p.dayChangePct=changesPercentage;
+        updated++;
+      });
+    });
+    // Identify any tickers that didn't come back from FMP (so we can warn the user)
+    tickers.forEach(t=>{
+      if(!data.find(q=>(q.symbol||'').toUpperCase()===t)){
+        missing.push(t);
+      }
+    });
+
+    meta.lastRefresh=Date.now();
+    meta.lastError=missing.length>0?`Not found: ${missing.join(', ')}`:null;
+    meta.lastCount=updated;
+    save();
+    render();
+    return{ok:true,updated,missing};
+  }catch(e){
+    meta.lastError=e.message||String(e);
+    save();
+    if(!silent)alert('Price refresh failed: '+meta.lastError);
+    render();
+    return{ok:false,reason:e.message};
+  }finally{
+    priceRefreshInFlight=false;
+  }
+}
+
+// Auto-refresh on page load — silent (no alerts), debounced.
+// Skip if a refresh happened in the last 60 seconds (avoid hammering on hot reload).
+function autoRefreshPricesOnLoad(){
+  const meta=getPriceMeta();
+  const now=Date.now();
+  if(meta.lastRefresh&&(now-meta.lastRefresh)<60*1000)return;
+  // Slight delay so initial render isn't blocked
+  setTimeout(()=>refreshPrices({silent:true}),500);
+}
+
+// Format "time ago" for the last refresh timestamp
+function timeAgo(ts){
+  if(!ts)return 'never';
+  const diff=Date.now()-ts;
+  if(diff<60*1000)return 'just now';
+  if(diff<60*60*1000)return Math.floor(diff/60000)+'m ago';
+  if(diff<24*60*60*1000)return Math.floor(diff/3600000)+'h ago';
+  return Math.floor(diff/86400000)+'d ago';
+}
 
 // ─── DEPOSITS & EQUITY SNAPSHOTS ─────────────────────────────────────────────
 // Total capital deposited into investment accounts (for TWR and cost-basis tracking)
@@ -1474,7 +1623,17 @@ function renderDashboard(){
   </div>`:''}
 
   <!-- INVESTING LENS — open portfolio -->
-  <div class="dash-section-label">Portfolio</div>
+  <div class="dash-section-label" style="display:flex;justify-content:space-between;align-items:center">
+    <span>Portfolio</span>
+    <span style="display:inline-flex;align-items:center;gap:10px;font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text3);font-family:var(--sans)">
+      ${getPriceMeta().lastError?`<span style="color:var(--amber)" title="${getPriceMeta().lastError}">⚠ ${getPriceMeta().lastError.length>40?getPriceMeta().lastError.slice(0,40)+'…':getPriceMeta().lastError}</span>`:''}
+      <span>Prices updated ${timeAgo(getPriceMeta().lastRefresh)}${getPriceMeta().lastCount?` · ${getPriceMeta().lastCount} synced`:''}</span>
+      <button class="btn btn-sm" onclick="refreshPrices()" style="padding:5px 10px;font-size:11px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:-2px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Refresh
+      </button>
+    </span>
+  </div>
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
     <div class="kpi kpi-link" onclick="go('positions')">
       <div class="accent" style="background:var(--gold)"></div>
@@ -1650,6 +1809,7 @@ function renderPositionCard(p){
         <div class="pos-metric">
           <div class="lbl">Entry → Current</div>
           <div class="val" style="font-size:13px;font-family:var(--mono)">${fmt(p.entry)} → ${fmt(p.current)}</div>
+          ${typeof p.dayChangePct==='number'?`<div style="font-size:10px;font-family:var(--mono);margin-top:2px;color:${p.dayChangePct>=0?'var(--green)':'var(--red)'}">${p.dayChangePct>=0?'+':''}${p.dayChangePct.toFixed(2)}% today</div>`:''}
         </div>
         <div class="pos-metric">
           <div class="lbl">Change</div>
@@ -1711,6 +1871,7 @@ function renderWatchCard(p){
         <div class="pos-metric">
           <div class="lbl">Current</div>
           <div class="val" style="font-size:15px;font-family:var(--mono)">${fmt(p.current)}</div>
+          ${typeof p.dayChangePct==='number'?`<div style="font-size:10px;font-family:var(--mono);margin-top:2px;color:${p.dayChangePct>=0?'var(--green)':'var(--red)'}">${p.dayChangePct>=0?'+':''}${p.dayChangePct.toFixed(2)}% today</div>`:''}
         </div>
         <div class="pos-metric">
           <div class="lbl">${hasTrigger?'Trigger':'Entry Target'}</div>
@@ -3036,6 +3197,10 @@ function renderWatchlist(){
       <div class="sec-sub">Names you're stalking — not yet positioned</div>
     </div>
     <div class="sec-actions">
+      <button class="btn btn-sm" onclick="refreshPrices()" title="Refresh prices for all active and watch positions">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Refresh
+      </button>
       <button class="btn btn-sm" onclick="addWatchlistPosition()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add to watchlist
@@ -4052,6 +4217,7 @@ function openModal(id=null){
   document.getElementById('m_conviction').value=p?p.conviction:'A';
   document.getElementById('m_currency').value=p?(p.currency||'USD'):'GBP';
   document.getElementById('m_accountId').value=p?(p.accountId||'ac_isa'):'ac_isa';
+  document.getElementById('m_fmpTicker').value=p?(p.fmpTicker||''):'';
   document.getElementById('modalBg').classList.add('open');
 }
 
@@ -4081,6 +4247,7 @@ function savePosition(){
     conviction:document.getElementById('m_conviction').value,
     currency:document.getElementById('m_currency').value||'GBP',
     accountId:document.getElementById('m_accountId').value||'ac_isa',
+    fmpTicker:(document.getElementById('m_fmpTicker').value||'').trim().toUpperCase()||null,
     type:'equity',
   };
   if(editingId){
@@ -4285,6 +4452,10 @@ recordSnapshot();
 save();
 
 render();
+
+// Auto-refresh prices on page load (silent, debounced — won't fire if refreshed
+// within the last 60 seconds, so hot-reloads don't burn API calls)
+autoRefreshPricesOnLoad();
 
 // First-load hint: if this is a fresh state (no prior saves), offer to import previous backup
 if(!localStorage.getItem('velox_capital_v7_lastsave')){
