@@ -553,10 +553,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <div class="field">
         <label>Currency</label>
         <select id="m_currency">
-          <option value="GBP">GBP — £ (UK-listed, ISA-native)</option>
-          <option value="USD">USD — $ (US-listed, converts to GBP at FX rate)</option>
+          <option value="GBp">GBp — pence (UK shares: BAE, Shell, BP — most LSE listings)</option>
+          <option value="GBP">GBP — £ (rare: shares quoted in pounds, eg some ETFs)</option>
+          <option value="USD">USD — $ (US-listed: NVDA, FCX, HWM)</option>
         </select>
-        <div class="hint">BAE, Shell, BP = GBP. NVDA, FCX, HWM = USD.</div>
+        <div class="hint">UK stocks trade in <strong>pence</strong> on LSE. BAE at 2224p = £22.24/share. 100p = £1.</div>
       </div>
       <div class="field">
         <label>Current Price</label>
@@ -833,13 +834,27 @@ const fmt0=n=>Math.round(+n||0).toLocaleString('en-GB');
 const gbp=n=>{const v=+n||0;return(v<0?'-':'')+'£'+fmt(Math.abs(v))};
 const gbp0=n=>{const v=+n||0;return(v<0?'-':'')+'£'+fmt0(Math.abs(v))};
 const usd=n=>{const v=+n||0;return(v<0?'-':'')+'$'+fmt(Math.abs(v))};
+// UK shares listed on LSE trade in pence (GBp), not pounds. e.g. BAE = 2224p, not £2224.
+// Format as a number with 'p' suffix. Decimals shown only for sub-pence precision.
+const gbpence=n=>{const v=+n||0;return(v<0?'-':'')+fmt(Math.abs(v),Math.abs(v)<1?4:1)+'p'};
+// Format any amount in its NATIVE currency for display on per-position cards.
+// USD → $X.XX, GBp → Xp (pence), GBP → £X.XX.
+const nativeMoney=(amount,currency)=>{
+  if(currency==='GBp')return gbpence(amount);
+  if(currency==='GBP')return gbp(amount);
+  return usd(amount); // default: USD
+};
 const pct=(n,d=1)=>(+n||0).toFixed(d)+'%';
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 
 // ─── CALCS ──────────────────────────────────────────────────────────────────
-// FX helper — convert any currency to GBP
+// FX helper — convert any currency to GBP (the base currency).
+//   GBP → 1:1
+//   GBp (pence) → divide by 100 (100 pence = £1)
+//   USD → multiply by FX rate
 const toGBP=(amount,currency)=>{
   if(currency==='GBP'||!currency)return+amount||0;
+  if(currency==='GBp')return(+amount||0)/100;
   if(currency==='USD')return(+amount||0)*(S.fxRate||0.79);
   return+amount||0;
 };
@@ -911,7 +926,8 @@ const realisedPnLYTD=()=>{
 function fmpTickerFor(p){
   if(p.fmpTicker&&p.fmpTicker.trim())return p.fmpTicker.trim().toUpperCase();
   const t=(p.ticker||'').trim().toUpperCase().replace(/\.$/,''); // strip trailing dot
-  if(p.currency==='GBP')return t+'.L';
+  // Both GBp (pence — most LSE shares) and GBP (pounds — rare) live on LSE → .L suffix
+  if(p.currency==='GBp'||p.currency==='GBP')return t+'.L';
   return t; // USD default
 }
 
@@ -1796,10 +1812,12 @@ function renderPositionCard(p){
   const pnl=value-cost;
   const pnlPct=p.entry>0?((p.current-p.entry)/p.entry)*100:0;
   const ccy=p.currency||'USD';
-  const valueDisp=ccy==='USD'?usd(value):gbp(value);
-  const pnlDisp=ccy==='USD'?usd(pnl):gbp(pnl);
+  const valueDisp=nativeMoney(value,ccy);
+  const pnlDisp=nativeMoney(pnl,ccy);
   const valueGBP=positionValueGBP(p);
+  // Show GBP conversion line for any non-base-pound currency (USD, GBp pence)
   const showFxLine=ccy!=='GBP';
+  const fxLabel=ccy==='GBp'?'£ (from pence)':'GBP';
 
   return`<div class="pos-card" onclick="openModal('${p.id}')">
     <div class="stripe stripe-${p.status}"></div>
@@ -1816,7 +1834,7 @@ function renderPositionCard(p){
         <div class="pos-metric">
           <div class="lbl">Value${showFxLine?' ('+ccy+')':''}</div>
           <div class="val">${valueDisp}</div>
-          ${showFxLine?`<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px">${gbp0(valueGBP)} GBP</div>`:''}
+          ${showFxLine?`<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px">${gbp0(valueGBP)} ${fxLabel}</div>`:''}
         </div>
         <div class="pos-metric">
           <div class="lbl">P&L</div>
@@ -1824,7 +1842,7 @@ function renderPositionCard(p){
         </div>
         <div class="pos-metric">
           <div class="lbl">Entry → Current</div>
-          <div class="val" style="font-size:13px;font-family:var(--mono)">${fmt(p.entry)} → ${fmt(p.current)}</div>
+          <div class="val" style="font-size:13px;font-family:var(--mono)">${nativeMoney(p.entry,ccy)} → ${nativeMoney(p.current,ccy)}</div>
           ${typeof p.dayChangePct==='number'?`<div style="font-size:10px;font-family:var(--mono);margin-top:2px;color:${p.dayChangePct>=0?'var(--green)':'var(--red)'}">${p.dayChangePct>=0?'+':''}${p.dayChangePct.toFixed(2)}% today</div>`:''}
         </div>
         <div class="pos-metric">
@@ -1886,16 +1904,16 @@ function renderWatchCard(p){
       <div class="pos-metrics" style="grid-template-columns:1fr 1fr 1fr">
         <div class="pos-metric">
           <div class="lbl">Current</div>
-          <div class="val" style="font-size:15px;font-family:var(--mono)">${fmt(p.current)}</div>
+          <div class="val" style="font-size:15px;font-family:var(--mono)">${nativeMoney(p.current,p.currency)}</div>
           ${typeof p.dayChangePct==='number'?`<div style="font-size:10px;font-family:var(--mono);margin-top:2px;color:${p.dayChangePct>=0?'var(--green)':'var(--red)'}">${p.dayChangePct>=0?'+':''}${p.dayChangePct.toFixed(2)}% today</div>`:''}
         </div>
         <div class="pos-metric">
           <div class="lbl">${hasTrigger?'Trigger':'Entry Target'}</div>
-          <div class="val" style="font-size:15px;font-family:var(--mono);color:var(--blue)">${fmt(p.entry)}</div>
+          <div class="val" style="font-size:15px;font-family:var(--mono);color:var(--blue)">${nativeMoney(p.entry,p.currency)}</div>
         </div>
         <div class="pos-metric">
           <div class="lbl">Stop</div>
-          <div class="val" style="font-size:15px;font-family:var(--mono);color:var(--red)">${p.stop?fmt(p.stop):'—'}</div>
+          <div class="val" style="font-size:15px;font-family:var(--mono);color:var(--red)">${p.stop?nativeMoney(p.stop,p.currency):'—'}</div>
         </div>
       </div>
       ${scanBlock}
@@ -4267,7 +4285,7 @@ function openModal(id=null){
   document.getElementById('m_current').value=p?p.current:'';
   document.getElementById('m_stop').value=p&&p.stop?p.stop:'';
   document.getElementById('m_conviction').value=p?p.conviction:'A';
-  document.getElementById('m_currency').value=p?(p.currency||'USD'):'GBP';
+  document.getElementById('m_currency').value=p?(p.currency||'USD'):'GBp';
   document.getElementById('m_accountId').value=p?(p.accountId||'ac_isa'):'ac_isa';
   document.getElementById('m_fmpTicker').value=p?(p.fmpTicker||''):'';
   document.getElementById('modalBg').classList.add('open');
@@ -4297,7 +4315,7 @@ function savePosition(){
     current:parseFloat(document.getElementById('m_current').value)||0,
     stop:parseFloat(document.getElementById('m_stop').value)||null,
     conviction:document.getElementById('m_conviction').value,
-    currency:document.getElementById('m_currency').value||'GBP',
+    currency:document.getElementById('m_currency').value||'GBp',
     accountId:document.getElementById('m_accountId').value||'ac_isa',
     fmpTicker:(document.getElementById('m_fmpTicker').value||'').trim().toUpperCase()||null,
     type:'equity',
