@@ -426,6 +426,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       Themes
     </div>
+    <div class="nav-item" data-tab="universe">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      Universe
+    </div>
     <div class="nav-item" data-tab="screener">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Screener
@@ -1504,6 +1508,7 @@ const TAB_META={
   pulse:{title:'Market Pulse',crumb:'Velox / Market'},
   themes:{title:'Themes',crumb:'Velox / Market'},
   screener:{title:'Screener',crumb:'Velox / Market'},
+  universe:{title:'Universe',crumb:'Velox / Market'},
   accounts:{title:'Accounts',crumb:'Velox / Capital'},
   cashflow:{title:'Cash Flow',crumb:'Velox / Capital'},
   journal:{title:'Journal',crumb:'Velox / Review'},
@@ -1551,6 +1556,7 @@ function render(){
   else if(tab==='watchlist')c.innerHTML=renderWatchlist();
   else if(tab==='allocation')c.innerHTML=renderAllocation();
   else if(tab==='screener')c.innerHTML=renderScreener();
+  else if(tab==='universe')c.innerHTML=renderUniverse();
   else if(tab==='pulse')c.innerHTML=renderPulse();
   else if(tab==='themes')c.innerHTML=renderThemes();
   else if(tab==='performance')c.innerHTML=renderPerformance();
@@ -4011,6 +4017,112 @@ function renderScreener(){
 
 // ─── PERFORMANCE TAB ─────────────────────────────────────────────────────────
 // TWR, simple return, Sharpe, equity curve, per-position R:R and hold times.
+// ─── UNIVERSE (daily systematic sweep, fed by data/universe_report.json) ─────
+let universeData=null,universeErr=null,universeLoading=false;
+function loadUniverse(force=false){
+  if(universeLoading)return;
+  if(universeData&&!force)return;
+  universeLoading=true;universeErr=null;
+  fetch('data/universe_report.json?ts='+Date.now())
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(j=>{universeData=j;})
+    .catch(e=>{universeErr=e.message;})
+    .finally(()=>{universeLoading=false;if(tab==='universe')render();});
+}
+function renderUniverse(){
+  if(!universeData&&!universeErr){
+    loadUniverse();
+    return`<div style="padding:60px 40px;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:14px">
+      <div style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--white)">Loading universe report…</div>
+    </div>`;
+  }
+  if(universeErr){
+    return`<div style="padding:60px 40px;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:14px">
+      <div style="font-family:var(--serif);font-size:18px;font-style:italic;color:var(--white);margin-bottom:10px">No universe report found</div>
+      <div style="font-size:13px;color:var(--text2);font-family:var(--sans)">Expected <span style="font-family:var(--mono);color:var(--accent)">data/universe_report.json</span> — ${universeErr}</div>
+      <div style="margin-top:18px"><button class="btn btn-gold" onclick="loadUniverse(true)">Retry</button></div>
+    </div>`;
+  }
+  const u=universeData;
+  const regCol=r=>r==='BULL'?'var(--green)':r==='BEAR'?'var(--red)':'var(--amber)';
+  const vCol=c=>c==='go'?'var(--green)':c==='watch'?'var(--amber)':'var(--red)';
+  const bears=u.instruments.filter(i=>i.regime==='BEAR').length;
+  const ranges=u.instruments.filter(i=>i.regime==='RANGE').length;
+  const bulls=u.instruments.filter(i=>i.regime==='BULL').length;
+  const flips=u.instruments.filter(i=>i.flip).length;
+  const gen=new Date(u.generated);
+  const fmtP=v=>(v>=0.005?v.toFixed(2).replace(/^0/,''):'.00');
+  const pBar=i=>`<div style="display:flex;gap:2px;align-items:center" title="P(bull)=${i.p_bull} P(range)=${i.p_range} P(bear)=${i.p_bear}">
+      <div style="height:7px;border-radius:2px;background:var(--green);width:${Math.max(2,i.p_bull*46)}px"></div>
+      <div style="height:7px;border-radius:2px;background:var(--amber);width:${Math.max(2,i.p_range*46)}px"></div>
+      <div style="height:7px;border-radius:2px;background:var(--red);width:${Math.max(2,i.p_bear*46)}px"></div>
+    </div>`;
+  const rows=u.instruments.map(i=>`
+    <tr style="${i.flip?'background:rgba(214,69,69,.07)':''}">
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border)"><strong style="color:var(--white)">${i.name}</strong><div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${i.symbol}</div></td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono)">${i.last}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:${i.day_chg_pct>0?'var(--green)':i.day_chg_pct<0?'var(--red)':'var(--text2)'}">${i.day_chg_pct>0?'+':''}${i.day_chg_pct}%</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border)"><span style="color:${regCol(i.regime)};font-weight:700">${i.regime}</span>${i.flip?' <span style="font-size:9px;background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700">FLIP</span>':''}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border)">${pBar(i)}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:11px;color:${i.supertrend.dir==='up'?'var(--green)':'var(--red)'}">${i.supertrend.dir==='up'?'▲':'▼'} <span style="font-family:var(--mono);color:var(--text2)">${i.supertrend.level}</span></td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text2)">${i.donchian.lower} – ${i.donchian.upper}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);color:${i.rsi<=30?'var(--green)':i.rsi>=70?'var(--red)':'var(--text)'}">${i.rsi}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border)"><span style="color:${vCol(i.verdict_class)};font-weight:700;font-size:11px">${i.verdict}</span></td>
+    </tr>
+    ${i.note?`<tr style="${i.flip?'background:rgba(214,69,69,.07)':''}"><td colspan="9" style="padding:0 12px 9px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2);font-style:italic">${i.note}</td></tr>`:''}
+  `).join('');
+  const groups=(u.groups||[]).map(g=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px">
+      <div style="font-family:var(--serif);font-size:15px;color:var(--white);margin-bottom:7px">${g.title}</div>
+      <div style="font-size:12.5px;color:var(--text2);line-height:1.6">${g.body}</div>
+    </div>`).join('');
+  const playbook=(u.playbook||[]).map(p=>`<li style="margin-bottom:6px;font-size:12.5px;color:var(--text2);line-height:1.55">${p}</li>`).join('');
+  const sources=(u.sources||[]).map(s=>`<a href="${s.url}" target="_blank" style="color:var(--accent);text-decoration:none">${s.label}</a>`).join(' · ');
+  return`
+  ${u.headline?`<div style="background:rgba(214,69,69,.12);border:1px solid var(--red);border-radius:10px;padding:12px 16px;margin-bottom:16px;color:var(--white);font-size:13px;font-weight:600">${u.headline}</div>`:''}
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="accent" style="background:var(--red)"></div>
+      <div class="lbl">Bear regimes</div><div class="val">${bears}</div><div class="sub">of ${u.instruments.length} instruments</div></div>
+    <div class="kpi"><div class="accent" style="background:var(--amber)"></div>
+      <div class="lbl">Range regimes</div><div class="val">${ranges}</div><div class="sub">no trend entries</div></div>
+    <div class="kpi"><div class="accent" style="background:var(--green)"></div>
+      <div class="lbl">Bull regimes</div><div class="val">${bulls}</div><div class="sub">long bias allowed</div></div>
+    <div class="kpi"><div class="accent" style="background:var(--blue)"></div>
+      <div class="lbl">Regime flips</div><div class="val">${flips}</div><div class="sub">on latest bar</div></div>
+  </div>
+  <div class="sec-head">
+    <div style="display:flex;align-items:baseline">
+      <div class="sec-title">Regime Dashboard</div>
+      <div class="sec-sub">HMM 3-state filter · Supertrend · Donchian(20) · RSI — daily bars</div>
+    </div>
+    <div class="sec-actions">
+      <span style="font-size:11px;color:var(--text3);margin-right:10px">Updated ${gen.toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+      <button class="btn btn-sm" onclick="loadUniverse(true)">Refresh</button>
+    </div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr>
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Instrument</th>
+        <th style="text-align:right;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Last</th>
+        <th style="text-align:right;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Day</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Regime</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">P(B/R/Br)</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Supertrend</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Donchian</th>
+        <th style="text-align:right;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">RSI</th>
+        <th style="text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Verdict</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  ${groups?`<div class="sec-head"><div class="sec-title">Group Commentary</div></div>${groups}`:''}
+  ${playbook?`<div class="sec-head"><div class="sec-title">Playbook</div></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:16px"><ul style="margin:0;padding-left:18px">${playbook}</ul></div>`:''}
+  ${sources?`<div style="font-size:10px;color:var(--text3);line-height:1.8;margin-bottom:20px">${sources}</div>`:''}
+  `;
+}
+
 function renderPerformance(){
   const twr=computeTWR();
   const simple=computeSimpleReturn();
